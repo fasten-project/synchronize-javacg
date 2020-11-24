@@ -1,0 +1,251 @@
+{
+  "type" : "record",
+  "name" : "fasten_MetadataDBExtension_out",
+  "namespace" : "infer",
+  "fields" : [ {
+    "name" : "input",
+    "type" : {
+      "type" : "record",
+      "name" : "input",
+      "namespace" : "infer.fasten_MetadataDBExtension_out",
+      "fields" : [ {
+        "name" : "input",
+        "type" : {
+          "type" : "record",
+          "name" : "input",
+          "namespace" : "infer.fasten_MetadataDBExtension_out.input",
+          "fields" : [ {
+            "name" : "input",
+            "type" : {
+              "type" : "record",
+              "name" : "input",
+              "namespace" : "infer.fasten_MetadataDBExtension_out.input.input",
+              "fields" : [ {
+                "name" : "date",
+                "type" : "long"
+              }, {
+                "name" : "groupId",
+                "type" : "string"
+              }, {
+                "name" : "artifactId",
+                "type" : "string"
+              }, {
+                "name" : "version",
+                "type" : "string"
+              } ]
+            }
+          }, {
+            "name" : "plugin_version",
+            "type" : "string"
+          }, {
+            "name" : "consumed_at",
+            "type" : "long"
+          }, {
+            "name" : "payload",
+            "type" : {
+              "type" : "record",
+              "name" : "payload",
+              "namespace" : "infer.fasten_MetadataDBExtension_out.input.input",
+              "fields" : [ {
+                "name" : "date",
+                "type" : "long"
+              }, {
+                "name" : "repoUrl",
+                "type" : "string"
+              }, {
+                "name" : "forge",
+                "type" : "string"
+              }, {
+                "name" : "groupId",
+                "type" : "string"
+              }, {
+                "name" : "sourcesUrl",
+                "type" : "string"
+              }, {
+                "name" : "artifactId",
+                "type" : "string"
+              }, {
+                "name" : "dependencyData",
+                "type" : {
+                  "type" : "record",
+                  "name" : "dependencyData",
+                  "namespace" : "infer.fasten_MetadataDBExtension_out.input.input.payload",
+                  "fields" : [ {
+                    "name" : "dependencyManagement",
+                    "type" : {
+                      "type" : "record",
+                      "name" : "dependencyManagement",
+                      "namespace" : "infer.fasten_MetadataDBExtension_out.input.input.payload.dependencyData",
+                      "fields" : [ {
+                        "name" : "dependencies",
+                        "type" : "string"
+                      } ]
+                    }
+                  }, {
+                    "name" : "dependencies",
+                    "type" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "record",
+                        "name" : "dependencies",
+                        "namespace" : "infer.fasten_MetadataDBExtension_out.input.input.payload.dependencyData",
+                        "fields" : [ {
+                          "name" : "versionConstraints",
+                          "type" : {
+                            "type" : "array",
+                            "items" : {
+                              "type" : "record",
+                              "name" : "versionConstraints",
+                              "namespace" : "infer.fasten_MetadataDBExtension_out.input.input.payload.dependencyData.dependencies",
+                              "fields" : [ {
+                                "name" : "isUpperHardRequirement",
+                                "type" : "boolean"
+                              }, {
+                                "name" : "isLowerHardRequirement",
+                                "type" : "boolean"
+                              }, {
+                                "name" : "upperBound",
+                                "type" : "string"
+                              }, {
+                                "name" : "lowerBound",
+                                "type" : "string"
+                              } ]
+                            }
+                          }
+                        }, {
+                          "name" : "groupId",
+                          "type" : "string"
+                        }, {
+                          "name" : "scope",
+                          "type" : "string"
+                        }, {
+                          "name" : "classifier",
+                          "type" : "string"
+                        }, {
+                          "name" : "artifactId",
+                          "type" : "string"
+                        }, {
+                          "name" : "exclusions",
+                          "type" : "string"
+                        }, {
+                          "name" : "optional",
+                          "type" : "boolean"
+                        }, {
+                          "name" : "type",
+                          "type" : "string"
+                        } ]
+                      }
+                    }
+                  } ]
+                }
+              }, {
+                "name" : "projectName",
+                "type" : "string"
+              }, {
+                "name" : "version",
+                "type" : "string"
+              }, {
+                "name" : "commitTag",
+                "type" : "string"
+              }, {
+                "name" : "packagingType",
+                "type" : "string"
+              }, {
+                "name" : "parentCoordinate",
+                "type" : "string"
+              } ]
+            }
+          }, {
+            "name" : "host",
+            "type" : "string"
+          }, {
+            "name" : "created_at",
+            "type" : "long"
+          }, {
+            "name" : "plugin_name",
+            "type" : "string"
+          } ]
+        }
+      }, {
+        "name" : "plugin_version",
+        "type" : "string"
+      }, {
+        "name" : "consumed_at",
+        "type" : "long"
+      }, {
+        "name" : "payload",
+        "type" : {
+          "type" : "record",
+          "name" : "payload",
+          "namespace" : "infer.fasten_MetadataDBExtension_out.input",
+          "fields" : [ {
+            "name" : "link",
+            "type" : "string"
+          }, {
+            "name" : "dir",
+            "type" : "string"
+          } ]
+        }
+      }, {
+        "name" : "host",
+        "type" : "string"
+      }, {
+        "name" : "created_at",
+        "type" : "long"
+      }, {
+        "name" : "plugin_name",
+        "type" : "string"
+      } ]
+    }
+  }, {
+    "name" : "plugin_version",
+    "type" : "string"
+  }, {
+    "name" : "consumed_at",
+    "type" : "long"
+  }, {
+    "name" : "payload",
+    "type" : {
+      "type" : "record",
+      "name" : "payload",
+      "namespace" : "infer.fasten_MetadataDBExtension_out",
+      "fields" : [ {
+        "name" : "product",
+        "type" : "string"
+      }, {
+        "name" : "nodes",
+        "type" : {
+          "type" : "array",
+          "items" : "long"
+        }
+      }, {
+        "name" : "edges",
+        "type" : {
+          "type" : "array",
+          "items" : {
+            "type" : "array",
+            "items" : "long"
+          }
+        }
+      }, {
+        "name" : "index",
+        "type" : "long"
+      }, {
+        "name" : "version",
+        "type" : "string"
+      }, {
+        "name" : "numInternalNodes",
+        "type" : "long"
+      } ]
+    }
+  }, {
+    "name" : "host",
+    "type" : "string"
+  }, {
+    "name" : "created_at",
+    "type" : "long"
+  }, {
+    "name" : "plugin_name",
+    "type" : "string"
+  } ]
+}
