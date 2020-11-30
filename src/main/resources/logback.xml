@@ -21,8 +21,10 @@
         <target>System.err</target>
     </appender>
 
-
-    <root level="info">
+    <logger name="org.apache" level="WARN">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    <root level="debug">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="STDOUT-ERROR" />
     </root>
