@@ -1,16 +1,26 @@
 name := "synchronize-javacg"
 version := "0.1"
-scalaVersion := "2.12.12"
+scalaVersion := "2.12.11"
 val flinkVersion = "1.11.2"
 
+// logging dependencies
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+
+// test dependencies
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % Test
+libraryDependencies += "io.github.embeddedkafka" %% "embedded-kafka" % "2.6.0" % Test
+
+// extra kafka dependency
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.6.0"
 
 val flinkDependencies = Seq(
   "org.apache.flink" %% "flink-clients" % flinkVersion,
   "org.apache.flink" %% "flink-scala" % flinkVersion,
+  "org.apache.flink" % "flink-formats" % flinkVersion,
+  "org.apache.flink" % "flink-json" % flinkVersion,
+  "org.apache.flink" %% "flink-connector-kafka" % flinkVersion,
   "org.apache.flink" %% "flink-streaming-scala" % flinkVersion)
 
 lazy val root = (project in file(".")).

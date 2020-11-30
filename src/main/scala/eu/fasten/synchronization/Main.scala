@@ -1,14 +1,31 @@
 package eu.fasten.synchronization
 
+import java.util.Properties
+
 import com.typesafe.scalalogging.Logger
+import eu.fasten.synchronization.util.{
+  SimpleKafkaDeserializationSchema,
+  SimpleKafkaSerializationSchema
+}
+import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.api.scala._
+import org.apache.flink.formats.json.JsonNodeDeserializationSchema
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
+import org.apache.flink.streaming.connectors.kafka.{
+  FlinkKafkaConsumer,
+  FlinkKafkaProducer
+}
+import org.apache.flink.streaming.util.serialization.JSONKeyValueDeserializationSchema
+
+import scala.collection.JavaConversions._
 
 /** Case class to store environment variables.
   *
   * @param brokers the Kafka brokers to connect to.
   * @param topicOne the first topic to read from.
   * @param topicTwo the second topic to read from.
+  *  @param outputTopic the output topic to emit to.
   * @param keys the keys to join on.
   * @param windowTime the amount of time elements are stored in state.
   */
@@ -21,7 +38,7 @@ case class Environment(brokers: List[String],
 
 object Main {
 
-  val env = StreamExecutionEnvironment.getExecutionEnvironment
+  val streamEnv = StreamExecutionEnvironment.getExecutionEnvironment
   val logger = Logger("Main")
 
   def main(args: Array[String]): Unit = {
@@ -33,12 +50,47 @@ object Main {
       logger.info(s"Loaded environment: ${loadedEnv}")
     }
 
-    env
-      .fromCollection(List("This is just a test"))
-      .flatMap(_.split(" "))
-      .print()
+    streamEnv
+      .addSource(setupKafkaConsumer(loadedEnv.get))
+      .map(x => x)
+      .addSink(setupKafkaProducer(loadedEnv.get))
 
-    env.execute()
+    streamEnv.execute()
+  }
+
+  def setupKafkaConsumer(
+      environment: Environment): FlinkKafkaConsumer[ObjectNode] = {
+    val properties = new Properties()
+    properties.setProperty("bootstrap.servers",
+                           environment.brokers.mkString(","))
+    properties.setProperty(
+      "group.id",
+      f"fasten.${environment.topicOne}.${environment.topicTwo}.sync")
+    properties.setProperty("auto.offset.reset", "earliest")
+
+    val maxRecords: Int = sys.env.get("MAX_RECORDS").map(_.toInt).getOrElse(-1)
+
+    val consumer: FlinkKafkaConsumer[ObjectNode] =
+      new FlinkKafkaConsumer[ObjectNode](
+        List(environment.topicOne, environment.topicTwo),
+        new SimpleKafkaDeserializationSchema(true, maxRecords),
+        properties)
+    consumer
+  }
+
+  def setupKafkaProducer(
+      environment: Environment): FlinkKafkaProducer[ObjectNode] = {
+    val properties = new Properties()
+    properties.setProperty("bootstrap.servers",
+                           environment.brokers.mkString(","))
+
+    val producer = new FlinkKafkaProducer[ObjectNode](
+      environment.outputTopic,
+      new SimpleKafkaSerializationSchema(environment.outputTopic),
+      properties,
+      FlinkKafkaProducer.Semantic.EXACTLY_ONCE)
+
+    producer
   }
 
   def verifyEnvironment(): Option[Environment] = {
