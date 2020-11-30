@@ -36,6 +36,9 @@ Compile / run  := Defaults.runTask(Compile / fullClasspath,
   Compile / run / runner
 ).evaluated
 
+// disabel parallel execution
+Test / parallelExecution := false
+
 // stays inside the sbt console when we press "ctrl-c" while a Flink program executes with "run" or "runMain"
 Compile / run / fork := true
 Global / cancelable := true

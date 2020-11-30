@@ -26,16 +26,12 @@ class SimpleIntegrationTest
       Source.fromResource("metadatadb_msg.json").getLines.mkString
 
     setEnv("MAX_RECORDS", "2")
-    for (i <- 1 to 100) {
-      publishStringMessageToKafka("repocloner.out", repoClonerMsg)
-      publishStringMessageToKafka("metadata.out", metadataMsg)
-    }
+    publishStringMessageToKafka("repocloner.out", repoClonerMsg)
+    publishStringMessageToKafka("metadata.out", metadataMsg)
 
     assertThrows[ExecutionException] {
       Main.main(Array[String]())
     }
-
-    assert(true)
 
   }
 

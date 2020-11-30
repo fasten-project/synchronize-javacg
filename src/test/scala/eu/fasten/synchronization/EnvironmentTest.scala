@@ -5,6 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 class EnvironmentTest extends AnyFunSuite {
 
   test("Empty environment should return None") {
+    removeEnv("KAFKA_BROKER")
     assert(Main.verifyEnvironment() == None)
   }
 
@@ -55,6 +56,17 @@ class EnvironmentTest extends AnyFunSuite {
       .get(System.getenv())
       .asInstanceOf[java.util.Map[java.lang.String, java.lang.String]]
     map.put(key, value)
+  }
+
+  def removeEnv(key: String): Unit = {
+    val field = System.getenv().getClass.getDeclaredField("m")
+    field.setAccessible(true)
+    val map = field
+      .get(System.getenv())
+      .asInstanceOf[java.util.Map[java.lang.String, java.lang.String]]
+
+    if (map.containsKey(key))
+      map.remove(key)
   }
 
 }
