@@ -27,15 +27,17 @@ import scala.collection.JavaConversions._
   * @param brokers the Kafka brokers to connect to.
   * @param topicOne the first topic to read from.
   * @param topicTwo the second topic to read from.
-  *  @param outputTopic the output topic to emit to.
-  * @param keys the keys to join on.
+  * @param outputTopic the output topic to emit to.
+  * @param topicOneKeys the keys to join on for topic one.
+  * @param topicTwoKeys the keys to join on for topic two.
   * @param windowTime the amount of time elements are stored in state.
   */
 case class Environment(brokers: List[String],
                        topicOne: String,
                        topicTwo: String,
                        outputTopic: String,
-                       keys: List[String],
+                       topicOneKeys: List[String],
+                       topicTwoKeys: List[String],
                        windowTime: Long)
 
 object Main {
@@ -54,9 +56,10 @@ object Main {
       logger.info(s"Loaded environment: ${loadedEnv}")
     }
 
+    //streamEnv.enableCheckpointing(1000)
     streamEnv
       .addSource(setupKafkaConsumer(loadedEnv.get))
-      .map(x => x)
+      .keyBy(new KeyDifferentTopics(loadedEnv.get))
       .addSink(setupKafkaProducer(loadedEnv.get))
 
     streamEnv.execute()
@@ -98,7 +101,7 @@ object Main {
         environment.outputTopic,
         new SimpleKafkaSerializationSchema(environment.outputTopic),
         properties,
-        FlinkKafkaProducer.Semantic.EXACTLY_ONCE)
+        FlinkKafkaProducer.Semantic.AT_LEAST_ONCE)
 
     producer
   }
@@ -110,7 +113,8 @@ object Main {
            "INPUT_TOPIC_ONE",
            "INPUT_TOPIC_TWO",
            "OUTPUT_TOPIC",
-           "JOIN_KEYS",
+           "TOPIC_ONE_KEYS",
+           "TOPIC_TWO_KEYS",
            "WINDOW_TIME")
     val envMapped = inputEnv.map(x => (x, sys.env.get(x)))
     val filterMap = envMapped.filter(_._2.isEmpty)
@@ -131,7 +135,8 @@ object Main {
         environmentFinal(2),
         environmentFinal(3),
         environmentFinal(4).split(",").toList,
-        environmentFinal(5).toLong
+        environmentFinal(5).split(",").toList,
+        environmentFinal(6).toLong
       ))
   }
 

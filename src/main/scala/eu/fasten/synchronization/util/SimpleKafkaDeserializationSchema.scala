@@ -15,11 +15,16 @@ class SimpleKafkaDeserializationSchema(includeMetadata: Boolean,
     if (maxRecords == -1)
       return false
 
-    if (counter >= maxRecords)
+    if (counter > maxRecords) {
+      // Wait for 5 more seconds and then throw an exception.
+      // A hacky way to get it working in tests.
+      Thread.sleep(5000)
+
       throw new JobException(
         s"Stop execution after receiving more than ${counter} records.")
-    else
+    } else {
       false
+    }
   }
 
   override def deserialize(

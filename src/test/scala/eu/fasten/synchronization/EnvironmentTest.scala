@@ -14,7 +14,8 @@ class EnvironmentTest extends AnyFunSuite {
     setEnv("INPUT_TOPIC_ONE", "test1")
     setEnv("INPUT_TOPIC_TWO", "test2")
     setEnv("OUTPUT_TOPIC", "test3")
-    setEnv("JOIN_KEYS", "key1")
+    setEnv("TOPIC_ONE_KEYS", "key1")
+    setEnv("TOPIC_TWO_KEYS", "key2")
     setEnv("WINDOW_TIME", "10")
 
     val env = Main.verifyEnvironment()
@@ -23,7 +24,8 @@ class EnvironmentTest extends AnyFunSuite {
     assert(env.get.topicOne == "test1")
     assert(env.get.topicTwo == "test2")
     assert(env.get.outputTopic == "test3")
-    assert(env.get.keys(0) == "key1")
+    assert(env.get.topicOneKeys(0) == "key1")
+    assert(env.get.topicTwoKeys(0) == "key2")
     assert(env.get.windowTime == 10)
   }
 
@@ -32,7 +34,8 @@ class EnvironmentTest extends AnyFunSuite {
     setEnv("INPUT_TOPIC_ONE", "test1")
     setEnv("INPUT_TOPIC_TWO", "test2")
     setEnv("OUTPUT_TOPIC", "test3")
-    setEnv("JOIN_KEYS", "key1,key3")
+    setEnv("TOPIC_ONE_KEYS", "key1,key2")
+    setEnv("TOPIC_TWO_KEYS", "key2")
     setEnv("WINDOW_TIME", "99")
 
     val env = Main.verifyEnvironment()
@@ -43,9 +46,10 @@ class EnvironmentTest extends AnyFunSuite {
     assert(env.get.topicOne == "test1")
     assert(env.get.topicTwo == "test2")
     assert(env.get.outputTopic == "test3")
-    assert(env.get.keys(0) == "key1")
-    assert(env.get.keys(1) == "key3")
-    assert(env.get.keys.length == 2)
+    assert(env.get.topicOneKeys(0) == "key1")
+    assert(env.get.topicOneKeys(1) == "key2")
+    assert(env.get.topicTwoKeys(0) == "key2")
+    assert(env.get.topicOneKeys.length == 2)
     assert(env.get.windowTime == 99)
   }
 

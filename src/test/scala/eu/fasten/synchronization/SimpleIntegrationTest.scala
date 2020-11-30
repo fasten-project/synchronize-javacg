@@ -15,6 +15,14 @@ class SimpleIntegrationTest
     with BeforeAndAfter {
 
   before {
+    val customBrokerConfig = Map("transaction.max.timeout.ms" -> "3600000")
+    val customProducerConfig = Map("" -> "")
+    val customConsumerConfig = Map("" -> "")
+
+    implicit val customKafkaConfig =
+      EmbeddedKafkaConfig(customBrokerProperties = customBrokerConfig,
+                          customProducerProperties = customProducerConfig,
+                          customConsumerProperties = customConsumerConfig)
     setAllEnv()
     EmbeddedKafka.start()
   }
@@ -28,6 +36,7 @@ class SimpleIntegrationTest
     setEnv("MAX_RECORDS", "2")
     publishStringMessageToKafka("repocloner.out", repoClonerMsg)
     publishStringMessageToKafka("metadata.out", metadataMsg)
+    publishStringMessageToKafka("repocloner.out", "{}")
 
     assertThrows[ExecutionException] {
       Main.main(Array[String]())
@@ -40,7 +49,11 @@ class SimpleIntegrationTest
     setEnv("INPUT_TOPIC_ONE", "repocloner.out")
     setEnv("INPUT_TOPIC_TWO", "metadata.out")
     setEnv("OUTPUT_TOPIC", "output.out")
-    setEnv("JOIN_KEYS", "key1")
+    setEnv("TOPIC_ONE_KEYS",
+           "input.input.groupId,input.input.artifactId,input.input.version")
+    setEnv(
+      "TOPIC_TWO_KEYS",
+      "input.input.input.groupId,input.input.input.artifactId,input.input.input.version")
     setEnv("WINDOW_TIME", "99")
   }
 

@@ -17,7 +17,7 @@ import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction
 import org.apache.flink.util.Collector
 
 class SynchronizeTopics(environment: Environment)
-    extends KeyedProcessFunction[String, ObjectNode, ObjectNode, ObjectNode] {
+    extends KeyedProcessFunction[String, ObjectNode, ObjectNode] {
 
   val logger = Logger(getClass.getSimpleName)
 
@@ -83,14 +83,6 @@ class SynchronizeTopics(environment: Environment)
                    value,
                    ctx,
                    out)
-    } else {
-      val exception = new JobException(
-        s"Expected a message from ${environment.topicOne} or ${environment.topicTwo}, but received from $topic.")
-      logger.info(
-        f"[INCOMING] [${ctx.getCurrentKey}] [$topic] [${value.get("metadata").get("timestamp").asText()}i] [-1i] [JobException]",
-        exception)
-
-      throw exception
     }
   }
 
@@ -210,10 +202,12 @@ class SynchronizeTopics(environment: Environment)
       out.collect(outputRecord)
 
     } else if (topicOneCurrentState != null) {
+      // TO ERR
       logger.warn(
         f"[EXPIRE] [${ctx.getCurrentKey}] [${environment.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
 
     } else if (topicTwoCurrentState != null) {
+      // TO ERR
       logger.warn(
         f"[EXPIRE] [${ctx.getCurrentKey}] [${environment.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
     } else {
