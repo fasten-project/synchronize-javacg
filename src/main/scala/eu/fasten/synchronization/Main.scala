@@ -7,11 +7,13 @@ import eu.fasten.synchronization.util.{
   SimpleKafkaDeserializationSchema,
   SimpleKafkaSerializationSchema
 }
-import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import java.time.Duration
+
+import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.scala._
-import org.apache.flink.formats.json.JsonNodeDeserializationSchema
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
+import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.connectors.kafka.{
   FlinkKafkaConsumer,
   FlinkKafkaProducer
@@ -39,6 +41,8 @@ case class Environment(brokers: List[String],
 object Main {
 
   val streamEnv = StreamExecutionEnvironment.getExecutionEnvironment
+  streamEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+
   val logger = Logger("Main")
 
   def main(args: Array[String]): Unit = {
@@ -75,6 +79,11 @@ object Main {
         List(environment.topicOne, environment.topicTwo),
         new SimpleKafkaDeserializationSchema(true, maxRecords),
         properties)
+
+    consumer.assignTimestampsAndWatermarks(
+      WatermarkStrategy.forBoundedOutOfOrderness[ObjectNode](
+        Duration.ofHours(1)))
+
     consumer
   }
 
@@ -84,11 +93,12 @@ object Main {
     properties.setProperty("bootstrap.servers",
                            environment.brokers.mkString(","))
 
-    val producer = new FlinkKafkaProducer[ObjectNode](
-      environment.outputTopic,
-      new SimpleKafkaSerializationSchema(environment.outputTopic),
-      properties,
-      FlinkKafkaProducer.Semantic.EXACTLY_ONCE)
+    val producer: FlinkKafkaProducer[ObjectNode] =
+      new FlinkKafkaProducer[ObjectNode](
+        environment.outputTopic,
+        new SimpleKafkaSerializationSchema(environment.outputTopic),
+        properties,
+        FlinkKafkaProducer.Semantic.EXACTLY_ONCE)
 
     producer
   }

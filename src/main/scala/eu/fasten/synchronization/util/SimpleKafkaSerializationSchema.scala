@@ -17,4 +17,5 @@ class SimpleKafkaSerializationSchema(topic: String)
       topic,
       element.toString.getBytes(StandardCharsets.UTF_8))
   }
+
 }
