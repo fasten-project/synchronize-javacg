@@ -15,6 +15,7 @@ import org.apache.flink.api.scala._
 case class Environment(brokers: List[String],
                        topicOne: String,
                        topicTwo: String,
+                       outputTopic: String,
                        keys: List[String],
                        windowTime: Long)
 
@@ -46,6 +47,7 @@ object Main {
       List("KAFKA_BROKER",
            "INPUT_TOPIC_ONE",
            "INPUT_TOPIC_TWO",
+           "OUTPUT_TOPIC",
            "JOIN_KEYS",
            "WINDOW_TIME")
     val envMapped = inputEnv.map(x => (x, sys.env.get(x)))
@@ -61,11 +63,14 @@ object Main {
 
     val environmentFinal = envMapped.map(_._2.get)
     Some(
-      Environment(environmentFinal(0).split(",").toList,
-                  environmentFinal(1),
-                  environmentFinal(2),
-                  environmentFinal(3).split(",").toList,
-                  environmentFinal(4).toLong))
+      Environment(
+        environmentFinal(0).split(",").toList,
+        environmentFinal(1),
+        environmentFinal(2),
+        environmentFinal(3),
+        environmentFinal(4).split(",").toList,
+        environmentFinal(5).toLong
+      ))
   }
 
 }
