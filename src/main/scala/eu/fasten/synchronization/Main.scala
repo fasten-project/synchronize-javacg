@@ -47,6 +47,8 @@ object Main {
 
   val logger = Logger("Main")
 
+  val topicPrefix = "fasten"
+
   def main(args: Array[String]): Unit = {
     // We need to ensure, we have the correct environment variables.
     val loadedEnv = verifyEnvironment()
@@ -98,10 +100,11 @@ object Main {
 
     val producer: FlinkKafkaProducer[ObjectNode] =
       new FlinkKafkaProducer[ObjectNode](
-        environment.outputTopic,
+        topicPrefix + "." + environment.outputTopic + ".out",
         new SimpleKafkaSerializationSchema(environment.outputTopic),
         properties,
-        FlinkKafkaProducer.Semantic.AT_LEAST_ONCE)
+        FlinkKafkaProducer.Semantic.AT_LEAST_ONCE
+      )
 
     producer
   }
