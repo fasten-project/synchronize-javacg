@@ -58,89 +58,32 @@ class SynchronizeTopics(environment: Environment)
     print("TIMESTAMP CHECK ")
     println(value.get("metadata").get("timestamp").asLong() == ctx.timestamp())
 
-    // Current time and the time of the event.
-    val currentTime = System.currentTimeMillis()
-    val timestamp = ctx.timestamp()
-
     val topic = value
       .get("metadata")
       .get("topic")
       .asText()
 
     logger.info(
-      f"[INCOMING] [${ctx.getCurrentKey}] [$topic] [${timestamp}i] [-1i] [NONE]")
+      f"[INCOMING] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1i] [NONE]")
 
     if (topic == environment.topicOne) {
+      handleRecord(topic,
+                   topicOneState,
+                   environment.topicTwo,
+                   topicTwoState,
+                   value,
+                   ctx,
+                   out)
 
-      /**
-        * SCENARIO 1: Check state of topic two.
-        *  1) if not emtpy, emit both values.
-        *  2) if empty, add this message to the state of topic one.
-        */
-      val topicTwoCurrentState = topicTwoState.value()
-
-      // We already have the data from the other topic! Join time :)
-      if (topicTwoCurrentState != null) {
-        val stateTimestamp = topicTwoCurrentState
-          .get("state_timestamp")
-          .asLong()
-
-        // Compute how long it took, to join both records.
-        val duration = currentTime - stateTimestamp
-
-        logger.info(
-          f"[JOIN] [${ctx.getCurrentKey}] [BOTH] [${value.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
-
-        // Get timestamp of the record from topic two.
-        val topicTwoRecordTimestamp =
-          topicTwoCurrentState.get("metadata").get("timestamp").asLong()
-
-        // Remove metadata.
-        topicTwoCurrentState.remove("state_timestamp")
-        topicTwoCurrentState.remove("metadata")
-        value.remove("metadata")
-
-        // Build an output record.
-        val outputRecord = mapper.createObjectNode()
-        outputRecord.put("key", ctx.getCurrentKey)
-        outputRecord.set(environment.topicTwo, value)
-        outputRecord.set(environment.topicOne, topicTwoCurrentState)
-
-        // Collect the record.
-        out.collect(outputRecord)
-
-        // Remove the timer associated with this state.
-        ctx
-          .timerService()
-          .deleteEventTimeTimer(
-            topicTwoRecordTimestamp + (environment.windowTime * 1000))
-
-        // Empty the state.
-        topicTwoState.clear()
-
-        return
-      } else { // The state in topic two is still empty, let's add to state one.
-        if (topicOneState.value() != null) { // There is a duplicate, because the state is not null. We just override it.
-          val duplicateDuration = currentTime - topicOneState
-            .value()
-            .get("state_timestamp")
-            .asLong()
-          logger.warn(
-            f"[DUPLICATE] [${ctx.getCurrentKey}] [$topic] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}i] [NONE]")
-        }
-
-        // Update state, add field with current timestamp (that's nice to know for the monitoring).
-        value.put("state_timestamp", currentTime.toString)
-        topicOneState.update(value)
-
-        // Set a timer, to ensure that this message is joined within {windowTime} seconds.
-        ctx
-          .timerService()
-          .registerEventTimeTimer(timestamp + (environment.windowTime * 1000))
-      }
-
-    } else if (topic == environment.topicTwo) {} else {
-
+    } else if (topic == environment.topicTwo) {
+      handleRecord(topic,
+                   topicTwoState,
+                   environment.topicOne,
+                   topicOneState,
+                   value,
+                   ctx,
+                   out)
+    } else {
       val exception = new JobException(
         s"Expected a message from ${environment.topicOne} or ${environment.topicTwo}, but received from $topic.")
       logger.info(
@@ -148,6 +91,88 @@ class SynchronizeTopics(environment: Environment)
         exception)
 
       throw exception
+    }
+  }
+
+  def handleRecord(
+      thisTopic: String,
+      thisTopicState: ValueState[ObjectNode],
+      otherTopic: String,
+      otherTopicState: ValueState[ObjectNode],
+      value: ObjectNode,
+      ctx: KeyedProcessFunction[String, ObjectNode, ObjectNode]#Context,
+      out: Collector[ObjectNode]): Unit = {
+
+    // Current time and the time of the event.
+    val currentTime = System.currentTimeMillis()
+    val timestamp = ctx.timestamp()
+
+    /**
+      *  Check state of the other topic.
+      *  1) if not emtpy, emit both values.
+      *  2) if empty, add this message to the state of this topic.
+      */
+    val otherTopicCurrentState = otherTopicState.value()
+
+    // We already have the data from the other topic! Join time :)
+    if (otherTopicCurrentState != null) {
+      val stateTimestamp = otherTopicCurrentState
+        .get("state_timestamp")
+        .asLong()
+
+      // Compute how long it took, to join both records.
+      val duration = currentTime - stateTimestamp
+
+      logger.info(
+        f"[JOIN] [${ctx.getCurrentKey}] [BOTH] [${value.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
+
+      // Get timestamp of the record from topic two.
+      val otherTopicRecordTimestamp =
+        otherTopicCurrentState.get("metadata").get("timestamp").asLong()
+
+      // Remove metadata.
+      otherTopicCurrentState.remove("state_timestamp")
+      otherTopicCurrentState.remove("metadata")
+      value.remove("metadata")
+
+      // Build an output record.
+      val outputRecord = mapper.createObjectNode()
+      outputRecord.put("key", ctx.getCurrentKey)
+      outputRecord.set(otherTopic, otherTopicCurrentState)
+      outputRecord.set(thisTopic, value)
+
+      // Collect the record.
+      out.collect(outputRecord)
+
+      // Remove the timer associated with this state.
+      ctx
+        .timerService()
+        .deleteEventTimeTimer(
+          otherTopicRecordTimestamp + (environment.windowTime * 1000))
+
+      // Empty the state.
+      otherTopicState.clear()
+
+      return
+    } else { // The state in topic two is still empty, let's add to state one.
+      if (thisTopicState
+            .value() != null) { // There is a duplicate, because the state is not null. We just override it.
+        val duplicateDuration = currentTime - thisTopicState
+          .value()
+          .get("state_timestamp")
+          .asLong()
+        logger.warn(
+          f"[DUPLICATE] [${ctx.getCurrentKey}] [$thisTopic] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}i] [NONE]")
+      }
+
+      // Update state, add field with current timestamp (that's nice to know for the monitoring).
+      value.put("state_timestamp", currentTime.toString)
+      thisTopicState.update(value)
+
+      // Set a timer, to ensure that this message is joined within {windowTime} seconds.
+      ctx
+        .timerService()
+        .registerEventTimeTimer(timestamp + (environment.windowTime * 1000))
     }
   }
 
