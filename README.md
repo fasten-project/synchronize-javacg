@@ -14,5 +14,6 @@ This job relies on the following (environment) variables:
 - `WINDOW_TIME`: The time (in seconds) to keep a record in state before its removed. I.e. how long to wait before the join must be finished. 
 
 ## Data flow
-![Job architecture](sync_job.svg)
+<img src="sync_job.svg"/>
+
 ## Deployment
