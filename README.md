@@ -9,7 +9,8 @@ This job relies on the following (environment) variables:
 - `INPUT_TOPIC_ONE`: The first input topic to read from and to join with `INPUT_TOPIC_TWO`.
 - `INPUT_TOPIC_TWO`: The second input topic to read from and to join with `INPUT_TOPIC_ONE`.
 - `OUTPUT_TOPIC`: The output topic to emit joined records to. This variable will be transformed to `fasten.{OUTPUT_TOPIC}.out` and `fasten.{OUTPUT_TOPIC}.err`.
-- `JOIN_KEYS`: A list of comma separated keys to join on. Supports nested JSON fields. For example: `artifact,some.nested.key`.
+- `TOPIC_ONE_KEYS`: A list of comma separated keys to join on for the _first_ topic. Supports nested JSON fields. For example: `artifact,some.nested.key`.
+- `TOPIC_TWO_KEYS`: A list of comma separated keys to join on for the _second_ topic. Supports nested JSON fields. For example: `artifact,some.nested.key`.
 - `WINDOW_TIME`: The time (in seconds) to keep a record in state before its removed. I.e. how long to wait before the join must be finished. 
 
 
