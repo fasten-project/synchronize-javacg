@@ -158,6 +158,8 @@ class SynchronizeTopics(environment: Environment)
           .asLong()
         logger.warn(
           f"[DUPLICATE] [${ctx.getCurrentKey}] [$thisTopic] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}i] [NONE]")
+
+        //TODO REMOVE TIMER
       }
 
       // Update state, add field with current timestamp (that's nice to know for the monitoring).
@@ -167,8 +169,16 @@ class SynchronizeTopics(environment: Environment)
       // Set a timer, to ensure that this message is joined within {windowTime} seconds.
       ctx
         .timerService()
-        .registerEventTimeTimer(timestamp + (environment.windowTime * 1000))
+        .registerEventTimeTimer(
+          ctx.timestamp() + (environment.windowTime * 1000))
+      //.registerEventTimeTimer(timestamp + (environment.windowTime * 1000))
 
+      println(
+        ctx
+          .timerService()
+          .currentWatermark() + (environment.windowTime * 1000))
+      println(ctx.timestamp + (environment.windowTime * 1000))
+      println(timestamp + (environment.windowTime * 1000))
       println(ctx.timestamp())
       println(ctx.timerService().currentWatermark())
     }
@@ -182,6 +192,8 @@ class SynchronizeTopics(environment: Environment)
 
     val topicOneCurrentState = topicOneState.value()
     val topicTwoCurrentState = topicTwoState.value()
+
+    println("HERE")
 
     if (topicOneCurrentState != null && topicTwoCurrentState != null) { // Both states are filled, this should not be possible.
       val duration = Math.max(

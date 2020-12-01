@@ -35,18 +35,20 @@ class ComplexNegativeIntegrationTest
 
     setEnv("MAX_RECORDS", "101")
     val repoClonerRecord =
-      new ProducerRecord("repocloner.out",
-                         null,
-                         System.currentTimeMillis() - 3 * 3600000, //3 hours ago
-                         "{}",
-                         repoClonerMsg)
+      new ProducerRecord(
+        "repocloner.out",
+        null,
+        System.currentTimeMillis() - (4 * 3600000), //3 hours ago
+        "{}",
+        repoClonerMsg)
 
     val repoClonerRecordLater =
-      new ProducerRecord("repocloner.out",
-                         null,
-                         System.currentTimeMillis() - 1 * 3600000, //1 hours ago
-                         "{}",
-                         repoCloner2Msg)
+      new ProducerRecord(
+        "repocloner.out",
+        null,
+        System.currentTimeMillis() - (1 * 3600000), //1 hours ago
+        "{}",
+        repoCloner2Msg)
 
     implicit val serializer = new StringSerializer
     publishToKafka(repoClonerRecord)

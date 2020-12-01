@@ -66,6 +66,8 @@ object Main {
 
     streamEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     streamEnv.getConfig.setAutoWatermarkInterval(500)
+    streamEnv.setParallelism(1)
+    streamEnv.setMaxParallelism(1)
 
     val mainStream: DataStream[ObjectNode] = streamEnv
       .addSource(setupKafkaConsumer(loadedEnv.get))
@@ -103,6 +105,7 @@ object Main {
     consumer.assignTimestampsAndWatermarks(
       WatermarkStrategy
         .forBoundedOutOfOrderness[ObjectNode](Duration.ofHours(1))
+        .withIdleness(Duration.ofSeconds(1))
     )
 
     consumer
