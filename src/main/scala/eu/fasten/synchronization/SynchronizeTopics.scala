@@ -14,7 +14,9 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMap
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction
 import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction
+import org.apache.flink.streaming.api.scala.OutputTag
 import org.apache.flink.util.Collector
+import org.apache.flink.api.scala._
 
 class SynchronizeTopics(environment: Environment)
     extends KeyedProcessFunction[String, ObjectNode, ObjectNode] {
@@ -49,6 +51,9 @@ class SynchronizeTopics(environment: Environment)
 
   // A Jackson mapper, to create JSON objects.
   lazy val mapper: ObjectMapper = new ObjectMapper()
+
+  //For the error output.
+  val errOutputTag = OutputTag[ObjectNode]("err-output")
 
   override def processElement(
       value: ObjectNode,
@@ -130,8 +135,8 @@ class SynchronizeTopics(environment: Environment)
       // Build an output record.
       val outputRecord = mapper.createObjectNode()
       outputRecord.put("key", ctx.getCurrentKey)
-      outputRecord.set(otherTopic, otherTopicCurrentState)
-      outputRecord.set(thisTopic, value)
+      outputRecord.set(otherTopic, otherTopicCurrentState.get("value"))
+      outputRecord.set(thisTopic, value.get("value"))
 
       // Collect the record.
       out.collect(outputRecord)
@@ -195,19 +200,39 @@ class SynchronizeTopics(environment: Environment)
       // Build an output record.
       val outputRecord = mapper.createObjectNode()
       outputRecord.put("key", ctx.getCurrentKey)
-      outputRecord.set(environment.topicOne, topicOneCurrentState)
-      outputRecord.set(environment.topicTwo, topicTwoCurrentState)
+      outputRecord.set(environment.topicOne, topicOneCurrentState.get("value"))
+      outputRecord.set(environment.topicTwo, topicTwoCurrentState.get("value"))
 
       // Collect the record.
       out.collect(outputRecord)
 
     } else if (topicOneCurrentState != null) {
-      // TO ERR
+
+      // Build an output record.
+      val outputRecord = mapper.createObjectNode()
+      outputRecord.put("key", ctx.getCurrentKey)
+      outputRecord.put("error",
+                       f"Missing information from ${environment.topicTwo}")
+      outputRecord.set(environment.topicOne, topicOneCurrentState.get("value"))
+
+      // side output
+      ctx.output(errOutputTag, outputRecord)
+
       logger.warn(
         f"[EXPIRE] [${ctx.getCurrentKey}] [${environment.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
 
     } else if (topicTwoCurrentState != null) {
-      // TO ERR
+
+      // Build an output record.
+      val outputRecord = mapper.createObjectNode()
+      outputRecord.put("key", ctx.getCurrentKey)
+      outputRecord.put("error",
+                       f"Missing information from ${environment.topicOne}")
+      outputRecord.set(environment.topicTwo, topicTwoCurrentState.get("value"))
+
+      // side output
+      ctx.output(errOutputTag, outputRecord)
+
       logger.warn(
         f"[EXPIRE] [${ctx.getCurrentKey}] [${environment.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
     } else {

@@ -17,8 +17,6 @@ class KeyDifferentTopics(environment: Environment)
       .get("topic")
       .asText()
 
-    logger.info(f"Pietje ${topic}")
-
     if (topic == environment.topicOne) {
       getKeyFromTopic(environment.topicOneKeys, value)
     } else if (topic == environment.topicTwo) {

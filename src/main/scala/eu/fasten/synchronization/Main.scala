@@ -7,7 +7,11 @@ import eu.fasten.synchronization.util.{
   SimpleKafkaDeserializationSchema,
   SimpleKafkaSerializationSchema
 }
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.scala.{
+  DataStream,
+  OutputTag,
+  StreamExecutionEnvironment
+}
 import java.time.Duration
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
@@ -59,10 +63,17 @@ object Main {
     }
 
     //streamEnv.enableCheckpointing(1000)
-    streamEnv
+    val mainStream: DataStream[ObjectNode] = streamEnv
       .addSource(setupKafkaConsumer(loadedEnv.get))
       .keyBy(new KeyDifferentTopics(loadedEnv.get))
-      .addSink(setupKafkaProducer(loadedEnv.get))
+      .process(new SynchronizeTopics(loadedEnv.get))
+
+    // Sideoutput
+    val errOutputTag = OutputTag[ObjectNode]("err-output")
+    val sideOutputStream = mainStream.getSideOutput(errOutputTag)
+
+    mainStream.addSink(setupKafkaProducer(loadedEnv.get))
+    sideOutputStream.addSink(setupKafkaErrProducer(loadedEnv.get))
 
     streamEnv.execute()
   }
@@ -101,6 +112,23 @@ object Main {
     val producer: FlinkKafkaProducer[ObjectNode] =
       new FlinkKafkaProducer[ObjectNode](
         topicPrefix + "." + environment.outputTopic + ".out",
+        new SimpleKafkaSerializationSchema(environment.outputTopic),
+        properties,
+        FlinkKafkaProducer.Semantic.AT_LEAST_ONCE
+      )
+
+    producer
+  }
+
+  def setupKafkaErrProducer(
+      environment: Environment): FlinkKafkaProducer[ObjectNode] = {
+    val properties = new Properties()
+    properties.setProperty("bootstrap.servers",
+                           environment.brokers.mkString(","))
+
+    val producer: FlinkKafkaProducer[ObjectNode] =
+      new FlinkKafkaProducer[ObjectNode](
+        topicPrefix + "." + environment.outputTopic + ".err",
         new SimpleKafkaSerializationSchema(environment.outputTopic),
         properties,
         FlinkKafkaProducer.Semantic.AT_LEAST_ONCE
