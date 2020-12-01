@@ -14,6 +14,7 @@ import org.apache.flink.streaming.api.scala.{
 }
 import java.time.Duration
 
+import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.scala._
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
@@ -47,7 +48,6 @@ case class Environment(brokers: List[String],
 object Main {
 
   val streamEnv = StreamExecutionEnvironment.getExecutionEnvironment
-  streamEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
   val logger = Logger("Main")
 
@@ -63,12 +63,16 @@ object Main {
     }
 
     //streamEnv.enableCheckpointing(1000)
+
+    streamEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    streamEnv.getConfig.setAutoWatermarkInterval(500)
+
     val mainStream: DataStream[ObjectNode] = streamEnv
       .addSource(setupKafkaConsumer(loadedEnv.get))
       .keyBy(new KeyDifferentTopics(loadedEnv.get))
       .process(new SynchronizeTopics(loadedEnv.get))
 
-    // Sideoutput
+    // SideOutput
     val errOutputTag = OutputTag[ObjectNode]("err-output")
     val sideOutputStream = mainStream.getSideOutput(errOutputTag)
 
@@ -97,8 +101,9 @@ object Main {
         properties)
 
     consumer.assignTimestampsAndWatermarks(
-      WatermarkStrategy.forBoundedOutOfOrderness[ObjectNode](
-        Duration.ofHours(1)))
+      WatermarkStrategy
+        .forBoundedOutOfOrderness[ObjectNode](Duration.ofHours(1))
+    )
 
     consumer
   }

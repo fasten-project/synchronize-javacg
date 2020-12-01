@@ -33,7 +33,7 @@ class SynchronizeTopics(environment: Environment)
 
   // State for topicOne.
   val topicOneStateDescriptor = new ValueStateDescriptor[ObjectNode](
-    environment.topicTwo + "_state",
+    environment.topicOne + "_state",
     classOf[ObjectNode])
   topicOneStateDescriptor.enableTimeToLive(stateTtlConfig)
 
@@ -168,6 +168,9 @@ class SynchronizeTopics(environment: Environment)
       ctx
         .timerService()
         .registerEventTimeTimer(timestamp + (environment.windowTime * 1000))
+
+      println(ctx.timestamp())
+      println(ctx.timerService().currentWatermark())
     }
   }
 

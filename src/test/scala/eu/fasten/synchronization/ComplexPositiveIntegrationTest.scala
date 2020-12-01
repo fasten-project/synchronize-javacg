@@ -97,7 +97,9 @@ class ComplexPositiveIntegrationTest
     val system = ActorSystem.create("simple_delay")
     system.scheduler.scheduleOnce(5 seconds) {
       publishToKafka(repoClonerRecord)
-      //triggers the app to stop.
+    }
+
+    system.scheduler.scheduleOnce(7 seconds) {
       publishStringMessageToKafka("repocloner.out", "{}")
     }
 
