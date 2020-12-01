@@ -2,9 +2,9 @@
   "input":{
     "input":{
       "date":1479205395,
-      "groupId":"de.digitalcollections",
-      "artifactId":"digitalcollections-core-backend-api",
-      "version":"1.2.3"
+      "groupId":"org.apache.tomcat",
+      "artifactId":"tomcat-catalina",
+      "version":"9.0.0.M3"
     },
     "plugin_version":"0.1.2",
     "consumed_at":1601297135,

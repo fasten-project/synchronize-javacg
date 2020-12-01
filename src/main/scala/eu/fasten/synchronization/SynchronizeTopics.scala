@@ -147,8 +147,9 @@ class SynchronizeTopics(environment: Environment)
         .deleteEventTimeTimer(
           otherTopicRecordTimestamp + (environment.windowTime * 1000))
 
-      // Empty the state.
+      // Empty the state of both, just to be safe.
       otherTopicState.clear()
+      thisTopicState.clear()
 
       return
     } else { // The state in topic two is still empty, let's add to state one.
