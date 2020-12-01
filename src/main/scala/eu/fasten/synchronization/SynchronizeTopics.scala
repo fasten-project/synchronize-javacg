@@ -60,9 +60,6 @@ class SynchronizeTopics(environment: Environment)
       ctx: KeyedProcessFunction[String, ObjectNode, ObjectNode]#Context,
       out: Collector[ObjectNode]): Unit = {
 
-    print("TIMESTAMP CHECK ")
-    println(value.get("metadata").get("timestamp").asLong() == ctx.timestamp())
-
     val topic = value
       .get("metadata")
       .get("topic")

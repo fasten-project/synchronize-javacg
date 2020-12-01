@@ -2,28 +2,32 @@ package eu.fasten.synchronization
 
 import java.util.concurrent.ExecutionException
 
+import akka.actor.ActorSystem
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import net.manub.embeddedkafka.EmbeddedKafka
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.deser.std.JsonNodeDeserializer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{
   StringDeserializer,
   StringSerializer
 }
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.BeforeAndAfter
 import org.scalatest.funsuite.AnyFunSuite
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.io.Source
 
-class ComplexPositiveIntegrationText
+class ComplexPositiveIntegrationTest
     extends AnyFunSuite
-    with BeforeAndAfterAll
-    with EmbeddedKafka {
+    with EmbeddedKafka
+    with BeforeAndAfter {
 
-  override def beforeAll() {
+  before {
     setAllEnv()
     EmbeddedKafka.start()
+  }
 
+  test("Message from first topic is a few seconds later.") {
     val repoClonerMsg: String =
       Source.fromResource("repocloner_msg.json").getLines.mkString
 
@@ -44,12 +48,14 @@ class ComplexPositiveIntegrationText
 
     implicit val serializer = new StringSerializer
     publishToKafka(repoClonerRecord)
-    publishToKafka(metaDataRecord)
 
-    publishStringMessageToKafka("repocloner.out", "{}")
-  }
+    val system = ActorSystem.create("simple_delay")
+    system.scheduler.scheduleOnce(5 seconds) {
+      publishToKafka(metaDataRecord)
+      //triggers the app to stop.
+      publishStringMessageToKafka("repocloner.out", "{}")
+    }
 
-  test("Two records in Kafka, very simple join.") {
     assertThrows[ExecutionException] {
       Main.main(Array[String]())
     }
@@ -66,7 +72,52 @@ class ComplexPositiveIntegrationText
     assert(messageParsed.get("non_existent.out") == null)
   }
 
-  override def afterAll(): Unit = {
+  test("Message from second topic is a few seconds later.") {
+    val repoClonerMsg: String =
+      Source.fromResource("repocloner_msg.json").getLines.mkString
+
+    val metadataMsg: String =
+      Source.fromResource("metadatadb_msg.json").getLines.mkString
+
+    setEnv("MAX_RECORDS", "2")
+    val repoClonerRecord = new ProducerRecord("repocloner.out",
+                                              null,
+                                              System.currentTimeMillis(),
+                                              "{}",
+                                              repoClonerMsg)
+    val metaDataRecord = new ProducerRecord("metadata.out",
+                                            null,
+                                            System.currentTimeMillis(),
+                                            "{}",
+                                            metadataMsg)
+
+    implicit val serializer = new StringSerializer
+    publishToKafka(metaDataRecord)
+
+    val system = ActorSystem.create("simple_delay")
+    system.scheduler.scheduleOnce(5 seconds) {
+      publishToKafka(repoClonerRecord)
+      //triggers the app to stop.
+      publishStringMessageToKafka("repocloner.out", "{}")
+    }
+
+    assertThrows[ExecutionException] {
+      Main.main(Array[String]())
+    }
+
+    implicit val deserializer = new StringDeserializer
+    val message = consumeFirstMessageFrom("output.out")
+
+    val messageParsed = new ObjectMapper().readValue(message, classOf[JsonNode])
+
+    println(s"Consumed message ${message}")
+
+    assert(messageParsed.get("repocloner.out") != null)
+    assert(messageParsed.get("metadata.out") != null)
+    assert(messageParsed.get("non_existent.out") == null)
+  }
+
+  after {
     EmbeddedKafka.stop()
   }
 
@@ -91,4 +142,5 @@ class ComplexPositiveIntegrationText
       .asInstanceOf[java.util.Map[java.lang.String, java.lang.String]]
     map.put(key, value)
   }
+
 }

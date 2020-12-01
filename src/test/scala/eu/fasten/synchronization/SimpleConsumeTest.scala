@@ -9,7 +9,7 @@ import org.scalatest.funsuite.AnyFunSuite
 
 import scala.io.Source
 
-class SimpleIntegrationTest
+class SimpleConsumeTest
     extends AnyFunSuite
     with EmbeddedKafka
     with BeforeAndAfter {
