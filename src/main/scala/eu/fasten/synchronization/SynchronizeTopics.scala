@@ -171,13 +171,7 @@ class SynchronizeTopics(environment: Environment)
         .timerService()
         .registerEventTimeTimer(
           ctx.timestamp() + (environment.windowTime * 1000))
-      //.registerEventTimeTimer(timestamp + (environment.windowTime * 1000))
 
-      println(
-        ctx
-          .timerService()
-          .currentWatermark() + (environment.windowTime * 1000))
-      println(ctx.timestamp + (environment.windowTime * 1000))
       println(timestamp + (environment.windowTime * 1000))
       println(ctx.timestamp())
       println(ctx.timerService().currentWatermark())
