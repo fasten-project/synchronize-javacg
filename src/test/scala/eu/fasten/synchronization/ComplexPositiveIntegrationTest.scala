@@ -59,7 +59,7 @@ class ComplexPositiveIntegrationTest
     }
 
     implicit val deserializer = new StringDeserializer
-    val message = consumeFirstMessageFrom("output.out")
+    val message = consumeFirstMessageFrom("fasten.output.out")
 
     val messageParsed = new ObjectMapper().readValue(message, classOf[JsonNode])
 
@@ -105,7 +105,7 @@ class ComplexPositiveIntegrationTest
     }
 
     implicit val deserializer = new StringDeserializer
-    val message = consumeFirstMessageFrom("output.out")
+    val message = consumeFirstMessageFrom("fasten.output.out")
 
     val messageParsed = new ObjectMapper().readValue(message, classOf[JsonNode])
 
