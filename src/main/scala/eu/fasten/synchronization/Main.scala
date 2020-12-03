@@ -136,12 +136,11 @@ object Main {
       logger.info(s"Loaded environment: ${loadedConfig}")
     }
 
-    //streamEnv.enableCheckpointing(1000)
-
     streamEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
     if (loadedConfig.get.production) {
       streamEnv.setParallelism(loadedConfig.get.parallelism)
+      streamEnv.enableCheckpointing(1000)
       streamEnv.setStateBackend(new RocksDBStateBackend(
         loadedConfig.get.backendFolder + "/" + loadedConfig.get.topicOne + "_" + loadedConfig.get.topicTwo + "_sync"))
       streamEnv.setRestartStrategy(

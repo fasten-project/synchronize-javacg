@@ -21,16 +21,18 @@ libraryDependencies += "com.github.scopt" %% "scopt" % "4.0.0"
 
 val flinkDependencies = Seq(
   "org.apache.flink" %% "flink-clients" % flinkVersion,
-  "org.apache.flink" %% "flink-scala" % flinkVersion,
+  "org.apache.flink" %% "flink-scala" % flinkVersion % "provided",
   "org.apache.flink" % "flink-formats" % flinkVersion,
   "org.apache.flink" % "flink-json" % flinkVersion,
   "org.apache.flink" %% "flink-statebackend-rocksdb" % flinkVersion,
   "org.apache.flink" %% "flink-connector-kafka" % flinkVersion,
-  "org.apache.flink" %% "flink-streaming-scala" % flinkVersion)
+  "org.apache.flink" %% "flink-streaming-scala" % flinkVersion % "provided")
 
 lazy val root = (project in file(".")).
   settings(
-    libraryDependencies ++= flinkDependencies
+    libraryDependencies ++= flinkDependencies,
+      assemblyJarName in assembly := "sync_job.jar",
+    assemblyOutputPath in assembly := file("lib/sync_job.jar")
   )
 
 assembly / mainClass := Some("eu.fasten.synchronization.Main")
