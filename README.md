@@ -44,4 +44,4 @@ Output to the `topic_prefix.output_topic.err` topic is:
 }
 ```
 
-If multiple keys are used for joining, the individual keys are concatenated using `:`.
+If multiple keys are used for joining, the individual keys are concatenated using `:`. `topic_one` and `topic_two` will be replaced with the actual topic names and the contents will be equal to the output of these topics. 

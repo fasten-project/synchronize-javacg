@@ -158,7 +158,13 @@ class SynchronizeTopics(c: Config)
         logger.warn(
           f"[DUPLICATE] [${ctx.getCurrentKey}] [$thisTopic] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}i] [NONE]")
 
-        //TODO REMOVE TIMER
+        ctx
+          .timerService()
+          .deleteEventTimeTimer(
+            value
+              .get("metadata")
+              .get("timestamp")
+              .asLong() + (c.windowTime * 1000))
       }
 
       // Update state, add field with current timestamp (that's nice to know for the monitoring).
@@ -169,10 +175,6 @@ class SynchronizeTopics(c: Config)
       ctx
         .timerService()
         .registerEventTimeTimer(ctx.timestamp() + (c.windowTime * 1000))
-
-      println(timestamp + (c.windowTime * 1000))
-      println(ctx.timestamp())
-      println(ctx.timerService().currentWatermark())
     }
   }
 
