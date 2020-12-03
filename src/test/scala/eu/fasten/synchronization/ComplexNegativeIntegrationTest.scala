@@ -53,9 +53,7 @@ class ComplexNegativeIntegrationTest
 
     val system = ActorSystem.create("simple_delay")
     system.scheduler.scheduleOnce(5 seconds) {
-      for (i <- 1 to 100) {
-        publishToKafka(repoClonerRecordLater)
-      }
+      publishToKafka(repoClonerRecordLater)
     }
 
     system.scheduler.scheduleOnce(7 seconds) {
@@ -67,7 +65,7 @@ class ComplexNegativeIntegrationTest
       Main.main(getStartArg())
     }
 
-    println("HI")
+    println("Test finished")
   }
 
   after {
@@ -75,7 +73,7 @@ class ComplexNegativeIntegrationTest
   }
 
   def getStartArg(): Array[String] = {
-    "-b localhost:6001 --topic_one repocloner.out --topic_two metadata.out -o output.out --topic_one_keys input.input.groupId,input.input.artifactId,input.input.version --topic_two_keys input.input.input.groupId,input.input.input.artifactId,input.input.input.version -w 3600 --max_records 101"
+    "-b localhost:6001 --topic_one repocloner.out --topic_two metadata.out -o output.out --topic_one_keys input.input.groupId,input.input.artifactId,input.input.version --topic_two_keys input.input.input.groupId,input.input.input.artifactId,input.input.input.version -w 3600 --max_records 2"
       .split(" ")
   }
 
