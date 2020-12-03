@@ -28,7 +28,7 @@ import scopt.OParser
 
 import scala.collection.JavaConversions._
 
-/** Case class to store environment variables.
+/** Case class to store config variables.
   *
   * @param brokers the Kafka brokers to connect to.
   * @param topicOne the first topic to read from.
@@ -38,14 +38,6 @@ import scala.collection.JavaConversions._
   * @param topicTwoKeys the keys to join on for topic two.
   * @param windowTime the amount of time elements are stored in state.
   */
-case class Environment(brokers: Seq[String],
-                       topicOne: String,
-                       topicTwo: String,
-                       outputTopic: String,
-                       topicOneKeys: List[String],
-                       topicTwoKeys: List[String],
-                       windowTime: Long)
-
 case class Config(brokers: Seq[String] = Seq(),
                   topicOne: String = "",
                   topicTwo: String = "",
@@ -122,13 +114,13 @@ object Main {
   val topicPrefix = "fasten"
 
   def main(args: Array[String]): Unit = {
-    // We need to ensure, we have the correct environment variables.
-    val loadedEnv = OParser.parse(configParser, args, Config())
+    // We need to ensure, we have the correct config.
+    val loadedConfig = verifyConfig(args)
 
-    if (loadedEnv.isEmpty) {
+    if (loadedConfig.isEmpty) {
       System.exit(1)
     } else {
-      logger.info(s"Loaded environment: ${loadedEnv}")
+      logger.info(s"Loaded environment: ${loadedConfig}")
     }
 
     //streamEnv.enableCheckpointing(1000)
@@ -139,16 +131,16 @@ object Main {
     streamEnv.setMaxParallelism(1)
 
     val mainStream: DataStream[ObjectNode] = streamEnv
-      .addSource(setupKafkaConsumer(loadedEnv.get))
-      .keyBy(new KeyDifferentTopics(loadedEnv.get))
-      .process(new SynchronizeTopics(loadedEnv.get))
+      .addSource(setupKafkaConsumer(loadedConfig.get))
+      .keyBy(new KeyDifferentTopics(loadedConfig.get))
+      .process(new SynchronizeTopics(loadedConfig.get))
 
     // SideOutput
     val errOutputTag = OutputTag[ObjectNode]("err-output")
     val sideOutputStream = mainStream.getSideOutput(errOutputTag)
 
-    mainStream.addSink(setupKafkaProducer(loadedEnv.get))
-    sideOutputStream.addSink(setupKafkaErrProducer(loadedEnv.get))
+    mainStream.addSink(setupKafkaProducer(loadedConfig.get))
+    sideOutputStream.addSink(setupKafkaErrProducer(loadedConfig.get))
 
     streamEnv.execute()
   }
@@ -171,7 +163,8 @@ object Main {
     consumer.assignTimestampsAndWatermarks(
       WatermarkStrategy
         .forBoundedOutOfOrderness[ObjectNode](Duration.ofHours(1))
-        .withIdleness(Duration.ofMinutes(1))
+        .withIdleness(
+          if (c.production) Duration.ofMinutes(1) else Duration.ofSeconds(1))
     )
 
     consumer
@@ -207,38 +200,8 @@ object Main {
     producer
   }
 
-  def verifyEnvironment(): Option[Environment] = {
-
-    val inputEnv =
-      List("KAFKA_BROKER",
-           "INPUT_TOPIC_ONE",
-           "INPUT_TOPIC_TWO",
-           "OUTPUT_TOPIC",
-           "TOPIC_ONE_KEYS",
-           "TOPIC_TWO_KEYS",
-           "WINDOW_TIME")
-    val envMapped = inputEnv.map(x => (x, sys.env.get(x)))
-    val filterMap = envMapped.filter(_._2.isEmpty)
-
-    filterMap.foreach { x =>
-      logger.error(s"Environment variable ${x._1} could not be found.")
-    }
-
-    if (filterMap.size > 0) {
-      return None
-    }
-
-    val environmentFinal = envMapped.map(_._2.get)
-    Some(
-      Environment(
-        environmentFinal(0).split(",").toList,
-        environmentFinal(1),
-        environmentFinal(2),
-        environmentFinal(3),
-        environmentFinal(4).split(",").toList,
-        environmentFinal(5).split(",").toList,
-        environmentFinal(6).toLong
-      ))
+  def verifyConfig(args: Array[String]): Option[Config] = {
+    OParser.parse(configParser, args, Config())
   }
 
 }

@@ -23,7 +23,6 @@ class ComplexNegativeIntegrationTest
     with BeforeAndAfter {
 
   before {
-    setAllEnv()
     EmbeddedKafka.start()
   }
 
@@ -33,7 +32,6 @@ class ComplexNegativeIntegrationTest
     val repoCloner2Msg: String =
       Source.fromResource("repocloner_1_msg.json").getLines.mkString
 
-    setEnv("MAX_RECORDS", "101")
     val repoClonerRecord =
       new ProducerRecord(
         "repocloner.out",
@@ -66,7 +64,7 @@ class ComplexNegativeIntegrationTest
     }
 
     assertThrows[ExecutionException] {
-      Main.main(Array[String]())
+      Main.main(getStartArg())
     }
 
     println("HI")
@@ -76,26 +74,9 @@ class ComplexNegativeIntegrationTest
     EmbeddedKafka.stop()
   }
 
-  def setAllEnv(): Unit = {
-    setEnv("KAFKA_BROKER", "localhost:6001")
-    setEnv("INPUT_TOPIC_ONE", "repocloner.out")
-    setEnv("INPUT_TOPIC_TWO", "metadata.out")
-    setEnv("OUTPUT_TOPIC", "output.out")
-    setEnv("TOPIC_ONE_KEYS",
-           "input.input.groupId,input.input.artifactId,input.input.version")
-    setEnv(
-      "TOPIC_TWO_KEYS",
-      "input.input.input.groupId,input.input.input.artifactId,input.input.input.version")
-    setEnv("WINDOW_TIME", "3600")
-  }
-
-  def setEnv(key: String, value: String) = {
-    val field = System.getenv().getClass.getDeclaredField("m")
-    field.setAccessible(true)
-    val map = field
-      .get(System.getenv())
-      .asInstanceOf[java.util.Map[java.lang.String, java.lang.String]]
-    map.put(key, value)
+  def getStartArg(): Array[String] = {
+    "-b localhost:6001 --topic_one repocloner.out --topic_two metadata.out -o output.out --topic_one_keys input.input.groupId,input.input.artifactId,input.input.version --topic_two_keys input.input.input.groupId,input.input.input.artifactId,input.input.input.version -w 3600 --max_records 101"
+      .split(" ")
   }
 
 }
