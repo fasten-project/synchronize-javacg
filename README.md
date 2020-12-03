@@ -25,4 +25,23 @@ Usage: Main [options]
 ## Data flow
 <img src="sync_job.svg"/>
 
-## Deployment
+## Output
+Output to the `topic_prefix.output_topic.out` topic is:
+```json
+{
+  "key": "example:coord:1.0",
+  "topic_one": { ... },
+  "topic_two": { ... }
+}
+```
+
+Output to the `topic_prefix.output_topic.err` topic is:
+```json
+{
+  "key": "example:coord:1.0",
+  "error: "Missing information from topic_one.",
+  "topic_two": { ... }
+}
+```
+
+If multiple keys are used for joining, the individual keys are concatenated using `:`.
