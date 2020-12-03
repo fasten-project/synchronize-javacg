@@ -5,8 +5,7 @@ import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.runtime.JobException
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
 
-class KeyDifferentTopics(environment: Environment)
-    extends KeySelector[ObjectNode, String] {
+class KeyDifferentTopics(c: Config) extends KeySelector[ObjectNode, String] {
 
   val logger = Logger(getClass.getSimpleName)
   val keySeparator = ":"
@@ -17,13 +16,13 @@ class KeyDifferentTopics(environment: Environment)
       .get("topic")
       .asText()
 
-    if (topic == environment.topicOne) {
-      getKeyFromTopic(environment.topicOneKeys, value)
-    } else if (topic == environment.topicTwo) {
-      getKeyFromTopic(environment.topicTwoKeys, value)
+    if (topic == c.topicOne) {
+      getKeyFromTopic(c.topicOneKeys.toList, value)
+    } else if (topic == c.topicTwo) {
+      getKeyFromTopic(c.topicTwoKeys.toList, value)
     } else {
       val exception = new JobException(
-        s"Expected a message from ${environment.topicOne} or ${environment.topicTwo}, but received from $topic.")
+        s"Expected a message from ${c.topicOne} or ${c.topicTwo}, but received from $topic.")
       logger.info(
         f"[INCOMING] [NONE] [$topic] [${value.get("metadata").get("timestamp").asText()}i] [-1i] [JobException]",
         exception)

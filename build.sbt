@@ -15,6 +15,10 @@ libraryDependencies += "io.github.embeddedkafka" %% "embedded-kafka" % "2.6.0" %
 // extra kafka dependency
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.6.0"
 
+
+// argument parsing
+libraryDependencies += "com.github.scopt" %% "scopt" % "4.0.0"
+
 val flinkDependencies = Seq(
   "org.apache.flink" %% "flink-clients" % flinkVersion,
   "org.apache.flink" %% "flink-scala" % flinkVersion,

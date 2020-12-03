@@ -18,14 +18,14 @@ import org.apache.flink.streaming.api.scala.OutputTag
 import org.apache.flink.util.Collector
 import org.apache.flink.api.scala._
 
-class SynchronizeTopics(environment: Environment)
+class SynchronizeTopics(c: Config)
     extends KeyedProcessFunction[String, ObjectNode, ObjectNode] {
 
   val logger = Logger(getClass.getSimpleName)
 
   // This is just a sanity check, state is removed after 2 times the window time.
   val stateTtlConfig = StateTtlConfig
-    .newBuilder(Time.seconds(environment.windowTime * 2))
+    .newBuilder(Time.seconds(c.windowTime * 2))
     .setStateVisibility(StateTtlConfig.StateVisibility.NeverReturnExpired)
     .setUpdateType(StateTtlConfig.UpdateType.OnReadAndWrite)
     .cleanupInRocksdbCompactFilter(10000)
@@ -33,7 +33,7 @@ class SynchronizeTopics(environment: Environment)
 
   // State for topicOne.
   val topicOneStateDescriptor = new ValueStateDescriptor[ObjectNode](
-    environment.topicOne + "_state",
+    c.topicOne + "_state",
     classOf[ObjectNode])
   topicOneStateDescriptor.enableTimeToLive(stateTtlConfig)
 
@@ -42,7 +42,7 @@ class SynchronizeTopics(environment: Environment)
 
   // State for topicTwo
   val topicTwoStateDescriptor = new ValueStateDescriptor[ObjectNode](
-    environment.topicTwo + "_state",
+    c.topicTwo + "_state",
     classOf[ObjectNode])
   topicTwoStateDescriptor.enableTimeToLive(stateTtlConfig)
 
@@ -68,19 +68,19 @@ class SynchronizeTopics(environment: Environment)
     logger.info(
       f"[INCOMING] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1i] [NONE]")
 
-    if (topic == environment.topicOne) {
+    if (topic == c.topicOne) {
       handleRecord(topic,
                    topicOneState,
-                   environment.topicTwo,
+                   c.topicTwo,
                    topicTwoState,
                    value,
                    ctx,
                    out)
 
-    } else if (topic == environment.topicTwo) {
+    } else if (topic == c.topicTwo) {
       handleRecord(topic,
                    topicTwoState,
-                   environment.topicOne,
+                   c.topicOne,
                    topicOneState,
                    value,
                    ctx,
@@ -141,8 +141,7 @@ class SynchronizeTopics(environment: Environment)
       // Remove the timer associated with this state.
       ctx
         .timerService()
-        .deleteEventTimeTimer(
-          otherTopicRecordTimestamp + (environment.windowTime * 1000))
+        .deleteEventTimeTimer(otherTopicRecordTimestamp + (c.windowTime * 1000))
 
       // Empty the state of both, just to be safe.
       otherTopicState.clear()
@@ -169,10 +168,9 @@ class SynchronizeTopics(environment: Environment)
       // Set a timer, to ensure that this message is joined within {windowTime} seconds.
       ctx
         .timerService()
-        .registerEventTimeTimer(
-          ctx.timestamp() + (environment.windowTime * 1000))
+        .registerEventTimeTimer(ctx.timestamp() + (c.windowTime * 1000))
 
-      println(timestamp + (environment.windowTime * 1000))
+      println(timestamp + (c.windowTime * 1000))
       println(ctx.timestamp())
       println(ctx.timerService().currentWatermark())
     }
@@ -207,8 +205,8 @@ class SynchronizeTopics(environment: Environment)
       // Build an output record.
       val outputRecord = mapper.createObjectNode()
       outputRecord.put("key", ctx.getCurrentKey)
-      outputRecord.set(environment.topicOne, topicOneCurrentState.get("value"))
-      outputRecord.set(environment.topicTwo, topicTwoCurrentState.get("value"))
+      outputRecord.set(c.topicOne, topicOneCurrentState.get("value"))
+      outputRecord.set(c.topicTwo, topicTwoCurrentState.get("value"))
 
       // Collect the record.
       out.collect(outputRecord)
@@ -218,30 +216,28 @@ class SynchronizeTopics(environment: Environment)
       // Build an output record.
       val outputRecord = mapper.createObjectNode()
       outputRecord.put("key", ctx.getCurrentKey)
-      outputRecord.put("error",
-                       f"Missing information from ${environment.topicTwo}")
-      outputRecord.set(environment.topicOne, topicOneCurrentState.get("value"))
+      outputRecord.put("error", f"Missing information from ${c.topicTwo}")
+      outputRecord.set(c.topicOne, topicOneCurrentState.get("value"))
 
       // side output
       ctx.output(errOutputTag, outputRecord)
 
       logger.warn(
-        f"[EXPIRE] [${ctx.getCurrentKey}] [${environment.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
+        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
 
     } else if (topicTwoCurrentState != null) {
 
       // Build an output record.
       val outputRecord = mapper.createObjectNode()
       outputRecord.put("key", ctx.getCurrentKey)
-      outputRecord.put("error",
-                       f"Missing information from ${environment.topicOne}")
-      outputRecord.set(environment.topicTwo, topicTwoCurrentState.get("value"))
+      outputRecord.put("error", f"Missing information from ${c.topicOne}")
+      outputRecord.set(c.topicTwo, topicTwoCurrentState.get("value"))
 
       // side output
       ctx.output(errOutputTag, outputRecord)
 
       logger.warn(
-        f"[EXPIRE] [${ctx.getCurrentKey}] [${environment.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
+        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
     } else {
       logger.warn(f"[EXPIRE] [${ctx.getCurrentKey}] [NONE] [0i] [-1i] [NONE]")
     }
