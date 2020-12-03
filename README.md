@@ -1,7 +1,7 @@
 # Synchronization Kafka Topics
-As multiple plugins process new Java versions, downstream tasks might experience synchronization issues when one of these plugins is not finished yet.
+As multiple plugins process new recods in paralllel, downstream tasks might experience synchronization issues when one of these plugins isn't finished yet.
 This (Flink) synchronization job solves this issue by joining multiple Kafka output topics and only emitting records when upstream tasks finished processing.
-This way, downstream plugins can safely read from the output of this synchronization job to process the new Java version with the guarantee that the upstream plugins finished their jobs.
+This way, downstream plugins can safely read from the output of this synchronization job to process the new records with the guarantee that the upstream plugins finished their jobs.
 
 ## Usage
 ```bash
@@ -22,9 +22,6 @@ Usage: Main [options]
                            The time to keep unjoined records in state. In seconds.
   -p, --production         Adding this flag will run the Flink job in production (enabling checkpointing, restart strategies etc.)
 ```
-## Data flow
-<img src="sync_job.svg"/>
-
 ## Output
 Output to the `topic_prefix.output_topic.out` topic is:
 ```json
@@ -45,3 +42,6 @@ Output to the `topic_prefix.output_topic.err` topic is:
 ```
 
 If multiple keys are used for joining, the individual keys are concatenated using `:`. `topic_one` and `topic_two` will be replaced with the actual topic names and the contents will be equal to the output of these topics. 
+
+## Data flow
+<img src="sync_job.svg"/>
