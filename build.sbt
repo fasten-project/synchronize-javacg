@@ -24,6 +24,7 @@ val flinkDependencies = Seq(
   "org.apache.flink" %% "flink-scala" % flinkVersion,
   "org.apache.flink" % "flink-formats" % flinkVersion,
   "org.apache.flink" % "flink-json" % flinkVersion,
+  "org.apache.flink" %% "flink-statebackend-rocksdb" % flinkVersion,
   "org.apache.flink" %% "flink-connector-kafka" % flinkVersion,
   "org.apache.flink" %% "flink-streaming-scala" % flinkVersion)
 

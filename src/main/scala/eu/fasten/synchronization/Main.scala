@@ -13,10 +13,14 @@ import org.apache.flink.streaming.api.scala.{
   StreamExecutionEnvironment
 }
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
+import org.apache.flink.api.common.restartstrategy.RestartStrategies
+import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.connectors.kafka.{
@@ -47,7 +51,9 @@ case class Config(brokers: Seq[String] = Seq(),
                   windowTime: Long = -1,
                   production: Boolean = false,
                   maxRecords: Int = -1,
-                  topicPrefix: String = "fasten")
+                  topicPrefix: String = "fasten",
+                  parallelism: Int = 1,
+                  backendFolder: String = "/mnt/fasten/flink")
 
 object Main {
 
@@ -104,7 +110,15 @@ object Main {
         .optional()
         .hidden()
         .text("Terminates the Kafka sources after receiving this amount of records. Used for development.")
-        .action((x, c) => c.copy(maxRecords = x))
+        .action((x, c) => c.copy(maxRecords = x)),
+      opt[Int]("parallelism")
+        .optional()
+        .text("The amount of parallel workers for Flink.")
+        .action((x, c) => c.copy(maxRecords = x)),
+      opt[String]("backendFolder")
+        .optional()
+        .text("Folder to store checkpoint data of Flink.")
+        .action((x, c) => c.copy(backendFolder = x)),
     )
   }
 
@@ -125,9 +139,18 @@ object Main {
     //streamEnv.enableCheckpointing(1000)
 
     streamEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    streamEnv.getConfig.setAutoWatermarkInterval(500)
-    streamEnv.setParallelism(1)
-    streamEnv.setMaxParallelism(1)
+
+    if (loadedConfig.get.production) {
+      streamEnv.setParallelism(loadedConfig.get.parallelism)
+      streamEnv.setStateBackend(new RocksDBStateBackend(
+        loadedConfig.get.backendFolder + "/" + loadedConfig.get.topicOne + "_" + loadedConfig.get.topicTwo + "_sync"))
+      streamEnv.setRestartStrategy(
+        RestartStrategies.fixedDelayRestart(3, Time.of(10, TimeUnit.SECONDS)))
+    } else {
+      streamEnv.getConfig.setAutoWatermarkInterval(500)
+      streamEnv.setParallelism(1)
+      streamEnv.setMaxParallelism(1)
+    }
 
     val mainStream: DataStream[ObjectNode] = streamEnv
       .addSource(setupKafkaConsumer(loadedConfig.get))
@@ -149,6 +172,8 @@ object Main {
     properties.setProperty("group.id",
                            f"fasten.${c.topicOne}.${c.topicTwo}.sync")
     properties.setProperty("auto.offset.reset", "earliest")
+    properties.setProperty("max.request.size", "5000000")
+    properties.setProperty("message.max.bytes", "5000000")
 
     val maxRecords: Int = c.maxRecords
 
@@ -171,6 +196,8 @@ object Main {
   def setupKafkaProducer(c: Config): FlinkKafkaProducer[ObjectNode] = {
     val properties = new Properties()
     properties.setProperty("bootstrap.servers", c.brokers.mkString(","))
+    properties.setProperty("max.request.size", "5000000")
+    properties.setProperty("message.max.bytes", "5000000")
 
     val producer: FlinkKafkaProducer[ObjectNode] =
       new FlinkKafkaProducer[ObjectNode](
@@ -187,6 +214,8 @@ object Main {
   def setupKafkaErrProducer(c: Config): FlinkKafkaProducer[ObjectNode] = {
     val properties = new Properties()
     properties.setProperty("bootstrap.servers", c.brokers.mkString(","))
+    properties.setProperty("max.request.size", "5000000")
+    properties.setProperty("message.max.bytes", "5000000")
 
     val producer: FlinkKafkaProducer[ObjectNode] =
       new FlinkKafkaProducer[ObjectNode](
