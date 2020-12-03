@@ -105,7 +105,7 @@ object Main {
     consumer.assignTimestampsAndWatermarks(
       WatermarkStrategy
         .forBoundedOutOfOrderness[ObjectNode](Duration.ofHours(1))
-        .withIdleness(Duration.ofSeconds(1))
+        .withIdleness(Duration.ofMinutes(1))
     )
 
     consumer
