@@ -13,10 +13,10 @@ on:
       - name: Create jar
         run: sbt assembly
       - name: Upload artifact
-          uses: actions/upload-artifact@v1.0.0
-          with:
-            name: sync_job.jar
-            path: lib/
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          name: sync_job.jar
+          path: lib/
       - name: Build image
         run: docker build . -f docker/Dockerfile -t syncjob
       - name: Log into registry
