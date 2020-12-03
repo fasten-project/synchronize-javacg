@@ -111,7 +111,6 @@ object Main {
   val streamEnv = StreamExecutionEnvironment.getExecutionEnvironment
 
   val logger = Logger("Main")
-  val topicPrefix = "fasten"
 
   def main(args: Array[String]): Unit = {
     // We need to ensure, we have the correct config.
@@ -141,7 +140,6 @@ object Main {
 
     mainStream.addSink(setupKafkaProducer(loadedConfig.get))
     sideOutputStream.addSink(setupKafkaErrProducer(loadedConfig.get))
-
     streamEnv.execute()
   }
 
@@ -176,8 +174,9 @@ object Main {
 
     val producer: FlinkKafkaProducer[ObjectNode] =
       new FlinkKafkaProducer[ObjectNode](
-        topicPrefix + "." + c.outputTopic + ".out",
-        new SimpleKafkaSerializationSchema(c.outputTopic),
+        c.topicPrefix + "." + c.outputTopic + ".out",
+        new SimpleKafkaSerializationSchema(
+          c.topicPrefix + "." + c.outputTopic + ".out"),
         properties,
         FlinkKafkaProducer.Semantic.AT_LEAST_ONCE
       )
@@ -191,8 +190,9 @@ object Main {
 
     val producer: FlinkKafkaProducer[ObjectNode] =
       new FlinkKafkaProducer[ObjectNode](
-        topicPrefix + "." + c.outputTopic + ".err",
-        new SimpleKafkaSerializationSchema(c.outputTopic),
+        c.topicPrefix + "." + c.outputTopic + ".err",
+        new SimpleKafkaSerializationSchema(
+          c.topicPrefix + "." + c.outputTopic + ".err"),
         properties,
         FlinkKafkaProducer.Semantic.AT_LEAST_ONCE
       )

@@ -187,8 +187,6 @@ class SynchronizeTopics(c: Config)
     val topicOneCurrentState = topicOneState.value()
     val topicTwoCurrentState = topicTwoState.value()
 
-    println("HERE")
-
     if (topicOneCurrentState != null && topicTwoCurrentState != null) { // Both states are filled, this should not be possible.
       val duration = Math.max(
         topicOneCurrentState.get("state_timestamp").asLong(),
