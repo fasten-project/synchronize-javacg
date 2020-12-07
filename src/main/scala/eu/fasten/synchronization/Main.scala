@@ -141,7 +141,7 @@ object Main {
     if (loadedConfig.get.production) {
       streamEnv.setParallelism(loadedConfig.get.parallelism)
       streamEnv.enableCheckpointing(1000)
-      streamEnv.setStateBackend(new RocksDBStateBackend(
+      streamEnv.setStateBackend(new RocksDBStateBackend("file://" +
         loadedConfig.get.backendFolder + "/" + loadedConfig.get.topicOne + "_" + loadedConfig.get.topicTwo + "_sync"))
       streamEnv.setRestartStrategy(
         RestartStrategies.fixedDelayRestart(3, Time.of(10, TimeUnit.SECONDS)))
