@@ -184,6 +184,8 @@ class SynchronizeTopics(c: Config)
       out: Collector[ObjectNode]): Unit = {
     // A timer is created when state is added. If this timer is called, we need to expire the state and output an error.
 
+    val currentTime = System.currentTimeMillis()
+
     val topicOneCurrentState = topicOneState.value()
     val topicTwoCurrentState = topicTwoState.value()
 
@@ -219,11 +221,18 @@ class SynchronizeTopics(c: Config)
       outputRecord.put("error", f"Missing information from ${c.topicTwo}")
       outputRecord.set(c.topicOne, topicOneCurrentState.get("value"))
 
+      val stateTimestamp = topicOneCurrentState
+        .get("state_timestamp")
+        .asLong()
+
+      // Compute how long it took, to join both records.
+      val duration = currentTime - stateTimestamp
+
       // side output
       ctx.output(errOutputTag, outputRecord)
 
       logger.warn(
-        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
+        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
 
     } else if (topicTwoCurrentState != null) {
 
@@ -233,11 +242,18 @@ class SynchronizeTopics(c: Config)
       outputRecord.put("error", f"Missing information from ${c.topicOne}")
       outputRecord.set(c.topicTwo, topicTwoCurrentState.get("value"))
 
+      val stateTimestamp = topicTwoCurrentState
+        .get("state_timestamp")
+        .asLong()
+
+      // Compute how long it took, to join both records.
+      val duration = currentTime - stateTimestamp
+
       // side output
       ctx.output(errOutputTag, outputRecord)
 
       logger.warn(
-        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [-1i] [NONE]")
+        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
     } else {
       logger.warn(f"[EXPIRE] [${ctx.getCurrentKey}] [NONE] [0i] [-1i] [NONE]")
     }
