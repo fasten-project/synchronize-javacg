@@ -15,7 +15,6 @@ libraryDependencies += "io.github.embeddedkafka" %% "embedded-kafka" % "2.6.0" %
 // extra kafka dependency
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.6.0"
 
-
 // argument parsing
 libraryDependencies += "com.github.scopt" %% "scopt" % "4.0.0"
 
@@ -32,7 +31,14 @@ lazy val root = (project in file(".")).
   settings(
     libraryDependencies ++= flinkDependencies,
       assemblyJarName in assembly := "sync_job.jar",
-    assemblyOutputPath in assembly := file("lib/sync_job.jar")
+    assemblyOutputPath in assembly := file("lib/sync_job.jar"),
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
+      case "log4j.properties"             => MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    }
   )
 
 assembly / mainClass := Some("eu.fasten.synchronization.Main")
