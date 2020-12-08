@@ -1,4 +1,4 @@
-# Synchronization Kafka Topics
+# Synchronization Kafka Topics ![Scala CI](https://github.com/fasten-project/synchronize-javacg/workflows/Scala%20CI/badge.svg)
 As multiple plugins process new recods in paralllel, downstream tasks might experience synchronization issues when one of these plugins isn't finished yet.
 This (Flink) synchronization job solves this issue by joining multiple Kafka output topics and only emitting records when upstream tasks finished processing.
 This way, downstream plugins can safely read from the output of this synchronization job to process the new records with the guarantee that the upstream plugins finished their jobs.
