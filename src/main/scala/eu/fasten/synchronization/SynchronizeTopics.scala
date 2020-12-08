@@ -23,19 +23,16 @@ class SynchronizeTopics(c: Config)
 
   val logger = Logger(getClass.getSimpleName)
 
-  // This is just a sanity check, state is removed after 2 times the window time.
-  val stateTtlConfig = StateTtlConfig
-    .newBuilder(Time.seconds(c.windowTime * 2))
-    .setStateVisibility(StateTtlConfig.StateVisibility.NeverReturnExpired)
-    .setUpdateType(StateTtlConfig.UpdateType.OnReadAndWrite)
-    .cleanupInRocksdbCompactFilter(10000)
-    .build
+  // Join already done state.
+  val joinDoneStateDescriptor =
+    new ValueStateDescriptor[Boolean]("join_done_state", classOf[Boolean])
+  lazy val joinDoneState: ValueState[Boolean] =
+    getRuntimeContext.getState(joinDoneStateDescriptor)
 
   // State for topicOne.
   val topicOneStateDescriptor = new ValueStateDescriptor[ObjectNode](
     c.topicOne + "_state",
     classOf[ObjectNode])
-  topicOneStateDescriptor.enableTimeToLive(stateTtlConfig)
 
   lazy val topicOneState: ValueState[ObjectNode] =
     getRuntimeContext.getState(topicOneStateDescriptor)
@@ -44,7 +41,6 @@ class SynchronizeTopics(c: Config)
   val topicTwoStateDescriptor = new ValueStateDescriptor[ObjectNode](
     c.topicTwo + "_state",
     classOf[ObjectNode])
-  topicTwoStateDescriptor.enableTimeToLive(stateTtlConfig)
 
   lazy val topicTwoState: ValueState[ObjectNode] =
     getRuntimeContext.getState(topicTwoStateDescriptor)
@@ -52,8 +48,8 @@ class SynchronizeTopics(c: Config)
   // A Jackson mapper, to create JSON objects.
   lazy val mapper: ObjectMapper = new ObjectMapper()
 
-  //For the error output.
-  val errOutputTag = OutputTag[ObjectNode]("err-output")
+  //For the delayed output.
+  val delayOutputTag = OutputTag[ObjectNode]("delay-output")
 
   override def processElement(
       value: ObjectNode,
@@ -67,6 +63,13 @@ class SynchronizeTopics(c: Config)
 
     logger.info(
       f"[INCOMING] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1i] [NONE]")
+
+    // The join is already done, we ignore the record.
+    if (joinAlreadyDone()) {
+      logger.info(
+        f"[DUPLICATE] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1i] [JoinAlreadyDoneException]")
+      return
+    }
 
     if (topic == c.topicOne) {
       handleRecord(topic,
@@ -147,6 +150,9 @@ class SynchronizeTopics(c: Config)
       otherTopicState.clear()
       thisTopicState.clear()
 
+      // Update the state to capture that join is already done.
+      doJoin()
+
       return
     } else { // The state in topic two is still empty, let's add to state one.
       if (thisTopicState
@@ -178,11 +184,23 @@ class SynchronizeTopics(c: Config)
     }
   }
 
+  def doJoin() = {
+    joinDoneState.update(true)
+  }
+
+  def joinAlreadyDone(): Boolean = {
+    if (joinDoneState.value() == null) {
+      return false
+    }
+
+    joinDoneState.value()
+  }
+
   override def onTimer(
       timestamp: Long,
       ctx: KeyedProcessFunction[String, ObjectNode, ObjectNode]#OnTimerContext,
       out: Collector[ObjectNode]): Unit = {
-    // A timer is created when state is added. If this timer is called, we need to expire the state and output an error.
+    // A timer is created when state is added. If this timer is called, we need to send the state as a delay and output an error.
 
     val currentTime = System.currentTimeMillis()
 
@@ -229,7 +247,7 @@ class SynchronizeTopics(c: Config)
       val duration = currentTime - stateTimestamp
 
       // side output
-      ctx.output(errOutputTag, outputRecord)
+      ctx.output(delayOutputTag, outputRecord)
 
       logger.warn(
         f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
@@ -250,7 +268,7 @@ class SynchronizeTopics(c: Config)
       val duration = currentTime - stateTimestamp
 
       // side output
-      ctx.output(errOutputTag, outputRecord)
+      ctx.output(delayOutputTag, outputRecord)
 
       logger.warn(
         f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
