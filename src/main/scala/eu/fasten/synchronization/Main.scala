@@ -173,8 +173,8 @@ object Main {
     properties.setProperty("group.id",
                            f"fasten.${c.topicOne}.${c.topicTwo}.sync")
     properties.setProperty("auto.offset.reset", "earliest")
-    properties.setProperty("max.request.size", "5000000")
-    properties.setProperty("message.max.bytes", "5000000")
+    properties.setProperty("max.partition.fetch.bytes", "20000000")
+    properties.setProperty("message.max.bytes", "20000000")
 
     val maxRecords: Int = c.maxRecords
 
@@ -198,7 +198,7 @@ object Main {
     val properties = new Properties()
     properties.setProperty("bootstrap.servers", c.brokers.mkString(","))
     properties.setProperty("max.request.size", "5000000")
-    properties.setProperty("message.max.bytes", "5000000")
+    properties.setProperty("message.max.bytes", "20000000")
 
     val producer: FlinkKafkaProducer[ObjectNode] =
       new FlinkKafkaProducer[ObjectNode](
