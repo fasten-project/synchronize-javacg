@@ -5,6 +5,7 @@ This way, downstream plugins can safely read from the output of this synchroniza
 
 ## Usage
 ```bash
+Flink Synchronization Job
 Usage: Main [options]
 
   -b, --brokers <broker1>,<broker2>,...
@@ -19,8 +20,11 @@ Usage: Main [options]
   --topic_two_keys <key1>,<key2>,...
                            A set of keys used for the first topic. To get nested keys use ".". 
   -w, --window_time <seconds>
-                           The time to keep unjoined records in state. In seconds.
+                           The time before a delay message is sent when a record is unjoined.
+  --delay_topic <string>   The topic to output delayed messages to.
   -p, --production         Adding this flag will run the Flink job in production (enabling checkpointing, restart strategies etc.)
+  --parallelism <value>    The amount of parallel workers for Flink.
+  --backendFolder <value>  Folder to store checkpoint data of Flink.
 ```
 ## Output
 Output to the `topic_prefix.output_topic.out` topic is:
@@ -32,7 +36,7 @@ Output to the `topic_prefix.output_topic.out` topic is:
 }
 ```
 
-Output to the `topic_prefix.output_topic.err` topic is:
+Output to the `topic_prefix.delay_topic.out` topic is:
 ```json
 {
   "key": "example:coord:1.0",

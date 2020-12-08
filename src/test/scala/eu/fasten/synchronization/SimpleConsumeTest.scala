@@ -47,7 +47,7 @@ class SimpleConsumeTest
   }
 
   def getStartArg(): Array[String] = {
-    "-b localhost:6001 --topic_one repocloner.out --topic_two metadata.out -o output.out --topic_one_keys input.input.groupId,input.input.artifactId,input.input.version --topic_two_keys input.input.input.groupId,input.input.input.artifactId,input.input.input.version -w 3600 --max_records 2"
+    "-b localhost:6001 --topic_one repocloner.out --topic_two metadata.out -o output.out --topic_one_keys input.input.groupId,input.input.artifactId,input.input.version --topic_two_keys input.input.input.groupId,input.input.input.artifactId,input.input.input.version -w 3600 --max_records 2 --delay_topic delay"
       .split(" ")
   }
 

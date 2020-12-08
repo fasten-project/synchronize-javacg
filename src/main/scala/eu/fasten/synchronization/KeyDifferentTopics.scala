@@ -24,7 +24,7 @@ class KeyDifferentTopics(c: Config) extends KeySelector[ObjectNode, String] {
       val exception = new JobException(
         s"Expected a message from ${c.topicOne} or ${c.topicTwo}, but received from $topic.")
       logger.info(
-        f"[INCOMING] [NONE] [$topic] [${value.get("metadata").get("timestamp").asText()}i] [-1i] [JobException]",
+        f"[INCOMING] [NONE] [$topic] [${value.get("metadata").get("timestamp").asText()}i] [-1] [JobException]",
         exception)
 
       throw exception

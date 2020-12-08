@@ -62,12 +62,12 @@ class SynchronizeTopics(c: Config)
       .asText()
 
     logger.info(
-      f"[INCOMING] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1i] [NONE]")
+      f"[INCOMING] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1] [NONE]")
 
-    // The join is already done, we ignore the record.
+    // The join is already done, we ignore and drop the record.
     if (joinAlreadyDone()) {
       logger.info(
-        f"[DUPLICATE] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1i] [JoinAlreadyDoneException]")
+        f"[DUPLICATE] [${ctx.getCurrentKey}] [$topic] [${ctx.timestamp()}i] [-1] [JoinAlreadyDoneException]")
       return
     }
 
@@ -121,7 +121,7 @@ class SynchronizeTopics(c: Config)
       val duration = currentTime - stateTimestamp
 
       logger.info(
-        f"[JOIN] [${ctx.getCurrentKey}] [BOTH] [${value.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
+        f"[JOIN] [${ctx.getCurrentKey}] [BOTH] [${value.get("metadata").get("timestamp").asText()}i] [${duration}] [NONE]")
 
       // Get timestamp of the record from topic two.
       val otherTopicRecordTimestamp =
@@ -162,7 +162,7 @@ class SynchronizeTopics(c: Config)
           .get("state_timestamp")
           .asLong()
         logger.warn(
-          f"[DUPLICATE] [${ctx.getCurrentKey}] [$thisTopic] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}i] [NONE]")
+          f"[DUPLICATE-OVERRIDE] [${ctx.getCurrentKey}] [$thisTopic] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}] [NONE]")
 
         ctx
           .timerService()
@@ -214,7 +214,7 @@ class SynchronizeTopics(c: Config)
         topicOneCurrentState.get("state_timestamp").asLong(),
         topicTwoCurrentState.get("state_timestamp").asLong())
       logger.warn(
-        f"[EXPIRE] [${ctx.getCurrentKey}] [BOTH] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
+        f"[DELAY] [${ctx.getCurrentKey}] [BOTH] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [DELAY]")
 
       // Remove metadata.
       topicOneCurrentState.remove("state_timestamp")
@@ -250,7 +250,7 @@ class SynchronizeTopics(c: Config)
       ctx.output(delayOutputTag, outputRecord)
 
       logger.warn(
-        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
+        f"[DELAY] [${ctx.getCurrentKey}] [${c.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [NONE]")
 
     } else if (topicTwoCurrentState != null) {
 
@@ -271,12 +271,9 @@ class SynchronizeTopics(c: Config)
       ctx.output(delayOutputTag, outputRecord)
 
       logger.warn(
-        f"[EXPIRE] [${ctx.getCurrentKey}] [${c.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}i] [NONE]")
+        f"[DELAY] [${ctx.getCurrentKey}] [${c.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [NONE]")
     } else {
-      logger.warn(f"[EXPIRE] [${ctx.getCurrentKey}] [NONE] [0i] [-1i] [NONE]")
+      logger.warn(f"[DELAY] [${ctx.getCurrentKey}] [NONE] [0i] [-1] [NONE]")
     }
-
-    topicOneState.clear()
-    topicTwoState.clear()
   }
 }

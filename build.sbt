@@ -13,7 +13,7 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % Test
 libraryDependencies += "io.github.embeddedkafka" %% "embedded-kafka" % "2.6.0" % Test
 
 // extra kafka dependency
-libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.6.0" % Test
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.6.0"
 
 // argument parsing
 libraryDependencies += "com.github.scopt" %% "scopt" % "4.0.0"

@@ -10,7 +10,7 @@ class EnvironmentTest extends AnyFunSuite {
 
   test("Simple environment test") {
     val arg =
-      "-b delft:9092 --topic_one test1 --topic_two test2 -o test3 --topic_one_keys key1 --topic_two_keys key2 -w 10"
+      "-b delft:9092 --topic_one test1 --topic_two test2 -o test3 --topic_one_keys key1 --topic_two_keys key2 -w 10 --delay_topic delay"
 
     val env = Main.verifyConfig(arg.split(" "))
     assert(env.isDefined)
@@ -25,7 +25,7 @@ class EnvironmentTest extends AnyFunSuite {
 
   test("More complex environment test") {
     val arg =
-      "-b delft:9092,samos:9092 --topic_one test1 --topic_two test2 -o test3 --topic_one_keys key1,key2 --topic_two_keys key2 -w 99"
+      "-b delft:9092,samos:9092 --topic_one test1 --topic_two test2 -o test3 --topic_one_keys key1,key2 --topic_two_keys key2 -w 99 --delay_topic delay"
 
     val env = Main.verifyConfig(arg.split(" "))
     assert(env.isDefined)
