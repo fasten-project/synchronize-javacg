@@ -170,7 +170,6 @@ object Main {
     // SideOutput
     val delayOutputTag = OutputTag[ObjectNode]("delay-output")
     val sideOutputStream = mainStream.getSideOutput(delayOutputTag)
-        .uid("delayed-output")
 
     mainStream.addSink(setupKafkaProducer(loadedConfig.get))
         .uid("kakfa-producer-join")
