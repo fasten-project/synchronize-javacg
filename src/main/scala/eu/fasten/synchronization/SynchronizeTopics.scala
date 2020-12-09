@@ -214,7 +214,7 @@ class SynchronizeTopics(c: Config)
         topicOneCurrentState.get("state_timestamp").asLong(),
         topicTwoCurrentState.get("state_timestamp").asLong())
       logger.info(
-        f"[DELAY] [${ctx.getCurrentKey}] [BOTH] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [DELAY]")
+        f"[JOIN] [${ctx.getCurrentKey}] [BOTH] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [DELAY]")
 
       // Remove metadata.
       topicOneCurrentState.remove("state_timestamp")
