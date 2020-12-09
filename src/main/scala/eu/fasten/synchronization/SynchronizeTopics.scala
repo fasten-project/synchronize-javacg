@@ -213,7 +213,7 @@ class SynchronizeTopics(c: Config)
         topicTwoCurrentState.get("state_timestamp").asLong()) - Math.min(
         topicOneCurrentState.get("state_timestamp").asLong(),
         topicTwoCurrentState.get("state_timestamp").asLong())
-      logger.warn(
+      logger.info(
         f"[DELAY] [${ctx.getCurrentKey}] [BOTH] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [DELAY]")
 
       // Remove metadata.
@@ -249,7 +249,7 @@ class SynchronizeTopics(c: Config)
       // side output
       ctx.output(delayOutputTag, outputRecord)
 
-      logger.warn(
+      logger.info(
         f"[DELAY] [${ctx.getCurrentKey}] [${c.topicOne}] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [NONE]")
 
     } else if (topicTwoCurrentState != null) {
@@ -270,7 +270,7 @@ class SynchronizeTopics(c: Config)
       // side output
       ctx.output(delayOutputTag, outputRecord)
 
-      logger.warn(
+      logger.info(
         f"[DELAY] [${ctx.getCurrentKey}] [${c.topicTwo}] [${topicTwoCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [NONE]")
     } else {
       logger.warn(f"[DELAY] [${ctx.getCurrentKey}] [NONE] [0i] [-1] [NONE]")
