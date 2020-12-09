@@ -147,13 +147,13 @@ object Main {
 
     if (loadedConfig.get.production) {
       streamEnv.setParallelism(loadedConfig.get.parallelism)
-      streamEnv.enableCheckpointing(1000)
+      streamEnv.enableCheckpointing(5000)
       streamEnv.setStateBackend(new RocksDBStateBackend(
         "file://" +
           loadedConfig.get.backendFolder + "/" + loadedConfig.get.topicOne + "_" + loadedConfig.get.topicTwo + "_sync",
         true))
       streamEnv.setRestartStrategy(
-        RestartStrategies.fixedDelayRestart(3, Time.of(10, TimeUnit.SECONDS)))
+        RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, Time.of(10, TimeUnit.SECONDS)))
     } else {
       streamEnv.getConfig.setAutoWatermarkInterval(500)
       streamEnv.setParallelism(1)
@@ -162,15 +162,20 @@ object Main {
 
     val mainStream: DataStream[ObjectNode] = streamEnv
       .addSource(setupKafkaConsumer(loadedConfig.get))
+      .uid("kafka-consumer")
       .keyBy(new KeyDifferentTopics(loadedConfig.get))
       .process(new SynchronizeTopics(loadedConfig.get))
+      .uid("synchronize-topics")
 
     // SideOutput
     val delayOutputTag = OutputTag[ObjectNode]("delay-output")
     val sideOutputStream = mainStream.getSideOutput(delayOutputTag)
+        .uid("delayed-output")
 
     mainStream.addSink(setupKafkaProducer(loadedConfig.get))
+        .uid("kakfa-producer-join")
     sideOutputStream.addSink(setupKafkaDelayProducer(loadedConfig.get))
+        .uid("kafka-producer-delayed")
     streamEnv.execute()
   }
 
