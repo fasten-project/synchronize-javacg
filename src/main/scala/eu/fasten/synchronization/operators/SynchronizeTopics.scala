@@ -1,22 +1,14 @@
-package eu.fasten.synchronization
+package eu.fasten.synchronization.operators
 
 import com.typesafe.scalalogging.Logger
-import org.apache.flink.api.common.state.{
-  MapState,
-  MapStateDescriptor,
-  StateTtlConfig,
-  ValueState,
-  ValueStateDescriptor
-}
-import org.apache.flink.api.common.time.Time
-import org.apache.flink.runtime.JobException
+import eu.fasten.synchronization.Config
+import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
+import org.apache.flink.api.scala._
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction
-import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction
 import org.apache.flink.streaming.api.scala.OutputTag
 import org.apache.flink.util.Collector
-import org.apache.flink.api.scala._
 
 case class TopicState(topic: String, state: ValueState[ObjectNode])
 

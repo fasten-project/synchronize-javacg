@@ -15,6 +15,10 @@ import org.apache.flink.streaming.api.scala.{
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
+import eu.fasten.synchronization.operators.{
+  KeyDifferentTopics,
+  SynchronizeTopics
+}
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.common.restartstrategy.RestartStrategies

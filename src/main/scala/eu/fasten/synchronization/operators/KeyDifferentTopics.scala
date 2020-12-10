@@ -1,6 +1,7 @@
-package eu.fasten.synchronization
+package eu.fasten.synchronization.operators
 
 import com.typesafe.scalalogging.Logger
+import eu.fasten.synchronization.Config
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.runtime.JobException
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
