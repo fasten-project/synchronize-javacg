@@ -22,6 +22,8 @@ Usage: Main [options]
   -w, --window_time <seconds>
                            The time before a delay message is sent when a record is unjoined.
   --delay_topic <string>   The topic to output delayed messages to.
+  --enable_delay <boolean>
+                           Enable or disable delayed messages.
   -p, --production         Adding this flag will run the Flink job in production (enabling checkpointing, restart strategies etc.)
   --parallelism <value>    The amount of parallel workers for Flink.
   --backendFolder <value>  Folder to store checkpoint data of Flink.

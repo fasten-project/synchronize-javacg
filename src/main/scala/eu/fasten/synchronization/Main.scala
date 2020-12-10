@@ -54,7 +54,8 @@ case class Config(brokers: Seq[String] = Seq(),
                   maxRecords: Int = -1,
                   topicPrefix: String = "fasten",
                   parallelism: Int = 1,
-                  backendFolder: String = "/mnt/fasten/flink")
+                  backendFolder: String = "/mnt/fasten/flink",
+                  enableDelay: Boolean = false)
 
 object Main {
 
@@ -109,6 +110,11 @@ object Main {
         .valueName("<string>")
         .text("The topic to output delayed messages to.")
         .action((x, c) => c.copy(delayTopic = x)),
+      opt[Boolean]("enable_delay")
+        .required()
+        .valueName("<boolean>")
+        .text("Enable or disable delayed messages.")
+        .action((x, c) => c.copy(enableDelay = x)),
       opt[Unit]('p', "production")
         .optional()
         .text("Adding this flag will run the Flink job in production (enabling checkpointing, restart strategies etc.)")
@@ -143,39 +149,51 @@ object Main {
       logger.info(s"Loaded environment: ${loadedConfig}")
     }
 
+    setupEnvironment(loadedConfig.get)
+
+    val mainStream: DataStream[ObjectNode] = streamEnv
+      .addSource(setupKafkaConsumer(loadedConfig.get))
+      .uid("kafka-consumer")
+      .name("Input Kafka Consumer")
+      .keyBy(new KeyDifferentTopics(loadedConfig.get))
+      .process(new SynchronizeTopics(loadedConfig.get))
+      .uid("synchronize-topics")
+      .name("Synchronize Topics")
+
+    // SideOutput
+    val delayOutputTag = OutputTag[ObjectNode]("delay-output")
+    val sideOutputStream = mainStream.getSideOutput(delayOutputTag)
+
+    mainStream
+      .addSink(setupKafkaProducer(loadedConfig.get))
+      .uid("kakfa-producer-join")
+      .name("Output Kafka Producer")
+    sideOutputStream
+      .addSink(setupKafkaDelayProducer(loadedConfig.get))
+      .uid("kafka-producer-delayed")
+      .name("Delayed Kafka Producer")
+    streamEnv.execute()
+  }
+
+  def setupEnvironment(config: Config): Unit = {
     streamEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
-    if (loadedConfig.get.production) {
-      streamEnv.setParallelism(loadedConfig.get.parallelism)
+    if (config.production) {
+      streamEnv.setParallelism(config.parallelism)
       streamEnv.enableCheckpointing(5000)
       streamEnv.setStateBackend(new RocksDBStateBackend(
         "file://" +
-          loadedConfig.get.backendFolder + "/" + loadedConfig.get.topicOne + "_" + loadedConfig.get.topicTwo + "_sync",
+          config.backendFolder + "/" + config.topicOne + "_" + config.topicTwo + "_sync",
         true))
       streamEnv.setRestartStrategy(
-        RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, Time.of(10, TimeUnit.SECONDS)))
+        RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE,
+                                            Time.of(10, TimeUnit.SECONDS)))
     } else {
       streamEnv.getConfig.setAutoWatermarkInterval(500)
       streamEnv.setParallelism(1)
       streamEnv.setMaxParallelism(1)
     }
 
-    val mainStream: DataStream[ObjectNode] = streamEnv
-      .addSource(setupKafkaConsumer(loadedConfig.get))
-      .uid("kafka-consumer")
-      .keyBy(new KeyDifferentTopics(loadedConfig.get))
-      .process(new SynchronizeTopics(loadedConfig.get))
-      .uid("synchronize-topics")
-
-    // SideOutput
-    val delayOutputTag = OutputTag[ObjectNode]("delay-output")
-    val sideOutputStream = mainStream.getSideOutput(delayOutputTag)
-
-    mainStream.addSink(setupKafkaProducer(loadedConfig.get))
-        .uid("kakfa-producer-join")
-    sideOutputStream.addSink(setupKafkaDelayProducer(loadedConfig.get))
-        .uid("kafka-producer-delayed")
-    streamEnv.execute()
   }
 
   def setupKafkaConsumer(c: Config): FlinkKafkaConsumer[ObjectNode] = {
@@ -235,7 +253,7 @@ object Main {
         new SimpleKafkaSerializationSchema(
           c.topicPrefix + "." + c.delayTopic + ".out"),
         properties,
-        FlinkKafkaProducer.Semantic.AT_LEAST_ONCE
+        FlinkKafkaProducer.Semantic.NONE
       )
 
     producer

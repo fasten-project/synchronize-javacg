@@ -18,6 +18,8 @@ import org.apache.flink.streaming.api.scala.OutputTag
 import org.apache.flink.util.Collector
 import org.apache.flink.api.scala._
 
+case class TopicState(topic: String, state: ValueState[ObjectNode])
+
 class SynchronizeTopics(c: Config)
     extends KeyedProcessFunction[String, ObjectNode, ObjectNode] {
 
@@ -72,19 +74,15 @@ class SynchronizeTopics(c: Config)
     }
 
     if (topic == c.topicOne) {
-      handleRecord(topic,
-                   topicOneState,
-                   c.topicTwo,
-                   topicTwoState,
+      handleRecord(TopicState(topic, topicOneState),
+                   TopicState(c.topicTwo, topicTwoState),
                    value,
                    ctx,
                    out)
 
     } else if (topic == c.topicTwo) {
-      handleRecord(topic,
-                   topicTwoState,
-                   c.topicOne,
-                   topicOneState,
+      handleRecord(TopicState(topic, topicTwoState),
+                   TopicState(c.topicOne, topicOneState),
                    value,
                    ctx,
                    out)
@@ -92,24 +90,21 @@ class SynchronizeTopics(c: Config)
   }
 
   def handleRecord(
-      thisTopic: String,
-      thisTopicState: ValueState[ObjectNode],
-      otherTopic: String,
-      otherTopicState: ValueState[ObjectNode],
+      thisTopicState: TopicState,
+      otherTopicState: TopicState,
       value: ObjectNode,
       ctx: KeyedProcessFunction[String, ObjectNode, ObjectNode]#Context,
       out: Collector[ObjectNode]): Unit = {
 
     // Current time and the time of the event.
     val currentTime = System.currentTimeMillis()
-    val timestamp = ctx.timestamp()
 
     /**
       *  Check state of the other topic.
       *  1) if not emtpy, emit both values.
       *  2) if empty, add this message to the state of this topic.
       */
-    val otherTopicCurrentState = otherTopicState.value()
+    val otherTopicCurrentState = otherTopicState.state.value()
 
     // We already have the data from the other topic! Join time :)
     if (otherTopicCurrentState != null) {
@@ -127,61 +122,83 @@ class SynchronizeTopics(c: Config)
       val otherTopicRecordTimestamp =
         otherTopicCurrentState.get("metadata").get("timestamp").asLong()
 
-      // Remove metadata.
-      otherTopicCurrentState.remove("state_timestamp")
-      otherTopicCurrentState.remove("metadata")
-      value.remove("metadata")
-
-      // Build an output record.
-      val outputRecord = mapper.createObjectNode()
-      outputRecord.put("key", ctx.getCurrentKey)
-      outputRecord.set(otherTopic, otherTopicCurrentState.get("value"))
-      outputRecord.set(thisTopic, value.get("value"))
-
       // Collect the record.
-      out.collect(outputRecord)
+      out.collect(
+        buildSuccessRecord(otherTopicCurrentState,
+                           value,
+                           otherTopicState.topic,
+                           thisTopicState.topic,
+                           ctx))
 
       // Remove the timer associated with this state.
-      ctx
-        .timerService()
-        .deleteEventTimeTimer(otherTopicRecordTimestamp + (c.windowTime * 1000))
+      if (c.enableDelay) {
+        ctx
+          .timerService()
+          .deleteEventTimeTimer(
+            otherTopicRecordTimestamp + (c.windowTime * 1000))
+      }
 
       // Empty the state of both, just to be safe.
-      otherTopicState.clear()
-      thisTopicState.clear()
+      otherTopicState.state.clear()
+      thisTopicState.state.clear()
 
       // Update the state to capture that join is already done.
       doJoin()
 
       return
     } else { // The state in topic two is still empty, let's add to state one.
-      if (thisTopicState
+      if (thisTopicState.state
             .value() != null) { // There is a duplicate, because the state is not null. We just override it.
-        val duplicateDuration = currentTime - thisTopicState
+        val duplicateDuration = currentTime - thisTopicState.state
           .value()
           .get("state_timestamp")
           .asLong()
         logger.warn(
-          f"[DUPLICATE-OVERRIDE] [${ctx.getCurrentKey}] [$thisTopic] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}] [NONE]")
+          f"[DUPLICATE-OVERRIDE] [${ctx.getCurrentKey}] [${thisTopicState.topic}] [${value.get("metadata").get("timestamp").asText()}i] [${duplicateDuration}] [NONE]")
 
-        ctx
-          .timerService()
-          .deleteEventTimeTimer(
-            value
-              .get("metadata")
-              .get("timestamp")
-              .asLong() + (c.windowTime * 1000))
+        if (c.enableDelay) {
+          ctx
+            .timerService()
+            .deleteEventTimeTimer(
+              value
+                .get("metadata")
+                .get("timestamp")
+                .asLong() + (c.windowTime * 1000))
+        }
       }
 
       // Update state, add field with current timestamp (that's nice to know for the monitoring).
       value.put("state_timestamp", currentTime.toString)
-      thisTopicState.update(value)
+      thisTopicState.state.update(value)
 
-      // Set a timer, to ensure that this message is joined within {windowTime} seconds.
-      ctx
-        .timerService()
-        .registerEventTimeTimer(ctx.timestamp() + (c.windowTime * 1000))
+      if (c.enableDelay) {
+        // Set a timer, to ensure that this message is joined within {windowTime} seconds.
+        ctx
+          .timerService()
+          .registerEventTimeTimer(ctx.timestamp() + (c.windowTime * 1000))
+      }
     }
+  }
+
+  def buildSuccessRecord(
+      otherTopicCurrentState: ObjectNode,
+      value: ObjectNode,
+      otherTopic: String,
+      thisTopic: String,
+      ctx: KeyedProcessFunction[String, ObjectNode, ObjectNode]#Context)
+    : ObjectNode = {
+    // Remove metadata.
+    otherTopicCurrentState.remove("state_timestamp")
+    otherTopicCurrentState.remove("metadata")
+    value.remove("metadata")
+
+    // Build an output record.
+    val outputRecord = mapper.createObjectNode()
+    outputRecord.put("key", ctx.getCurrentKey)
+    outputRecord.set(otherTopic, otherTopicCurrentState.get("value"))
+    outputRecord.set(thisTopic, value.get("value"))
+
+    outputRecord
   }
 
   def doJoin() = {
@@ -194,6 +211,26 @@ class SynchronizeTopics(c: Config)
     }
 
     joinDoneState.value()
+  }
+
+  def buildSuccessRecordOnTimer(
+      topicOneCurrentState: ObjectNode,
+      topicTwoCurrentState: ObjectNode,
+      ctx: KeyedProcessFunction[String, ObjectNode, ObjectNode]#OnTimerContext)
+    : ObjectNode = {
+    // Remove metadata.
+    topicOneCurrentState.remove("state_timestamp")
+    topicOneCurrentState.remove("metadata")
+    topicTwoCurrentState.remove("state_timestamp")
+    topicTwoCurrentState.remove("metadata")
+
+    // Build an output record.
+    val outputRecord = mapper.createObjectNode()
+    outputRecord.put("key", ctx.getCurrentKey)
+    outputRecord.set(c.topicOne, topicOneCurrentState.get("value"))
+    outputRecord.set(c.topicTwo, topicTwoCurrentState.get("value"))
+
+    outputRecord
   }
 
   override def onTimer(
@@ -216,20 +253,11 @@ class SynchronizeTopics(c: Config)
       logger.info(
         f"[JOIN] [${ctx.getCurrentKey}] [BOTH] [${topicOneCurrentState.get("metadata").get("timestamp").asText()}i] [${duration}] [DELAY]")
 
-      // Remove metadata.
-      topicOneCurrentState.remove("state_timestamp")
-      topicOneCurrentState.remove("metadata")
-      topicTwoCurrentState.remove("state_timestamp")
-      topicTwoCurrentState.remove("metadata")
-
-      // Build an output record.
-      val outputRecord = mapper.createObjectNode()
-      outputRecord.put("key", ctx.getCurrentKey)
-      outputRecord.set(c.topicOne, topicOneCurrentState.get("value"))
-      outputRecord.set(c.topicTwo, topicTwoCurrentState.get("value"))
-
       // Collect the record.
-      out.collect(outputRecord)
+      out.collect(
+        buildSuccessRecordOnTimer(topicOneCurrentState,
+                                  topicTwoCurrentState,
+                                  ctx))
 
     } else if (topicOneCurrentState != null) {
 
