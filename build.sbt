@@ -13,7 +13,7 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % Test
 libraryDependencies += "io.github.embeddedkafka" %% "embedded-kafka" % "2.6.0" % Test
 
 // extra kafka dependency
-libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.6.0" //% Test
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.6.0" % Test
 
 // argument parsing
 libraryDependencies += "com.github.scopt" %% "scopt" % "4.0.0"
@@ -29,8 +29,9 @@ val flinkDependencies = Seq(
 
 lazy val root = (project in file(".")).
   settings(
+    test in assembly := {},
     libraryDependencies ++= flinkDependencies,
-      assemblyJarName in assembly := "sync_job.jar",
+    assemblyJarName in assembly := "sync_job.jar",
     assemblyOutputPath in assembly := file("lib/sync_job.jar"),
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", xs @ _*)  => MergeStrategy.discard

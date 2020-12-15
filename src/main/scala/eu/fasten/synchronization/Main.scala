@@ -31,7 +31,8 @@ import org.apache.flink.streaming.connectors.kafka.{
   FlinkKafkaConsumer,
   FlinkKafkaProducer
 }
-import org.apache.flink.streaming.util.serialization.JSONKeyValueDeserializationSchema
+import org.apache.flink.streaming.api.environment.CheckpointConfig
+import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup
 import scopt.OParser
 
 import scala.collection.JavaConversions._
@@ -192,6 +193,9 @@ object Main {
       streamEnv.setRestartStrategy(
         RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE,
                                             Time.of(10, TimeUnit.SECONDS)))
+      val cConfig = streamEnv.getCheckpointConfig
+      cConfig.enableExternalizedCheckpoints(
+        ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION)
     } else {
       streamEnv.getConfig.setAutoWatermarkInterval(500)
       streamEnv.setParallelism(1)
