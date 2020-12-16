@@ -50,7 +50,7 @@ Output to the `topic_prefix.delay_topic.out` topic is:
 If multiple keys are used for joining, the individual keys are concatenated using `:`. `topic_one` and `topic_two` will be replaced with the actual topic names and the contents will be equal to the output of these topics. 
 
 
-## Deployment
+## Deployment (old)
 To create and configure the topics, execute this on one of the servers
 ```bash
 
