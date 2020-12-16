@@ -34,8 +34,14 @@ object MoveData {
 
     streamEnv
       .addSource(getConsumer())
+      .uid("kafka-consumer-move-data")
+      .name("Consume data.")
       .map(_.get("value").deepCopy[ObjectNode]())
-      .print()
+      .uid("map-move-data")
+      .name("Map data.")
+      .addSink(getProducer())
+      .uid("kafka-producer-move-data")
+      .name("Produce data.")
 
     streamEnv.execute()
   }
@@ -60,6 +66,7 @@ object MoveData {
     properties.setProperty("max.partition.fetch.bytes", "50000000")
     properties.setProperty("message.max.bytes", "50000000")
     properties.setProperty("max.request.size", "50000000")
+    properties.setProperty("transaction.timeout.ms", "600000")
 
     new FlinkKafkaProducer[ObjectNode](
       "fasten.MetadataDBJavaExtension.out",
