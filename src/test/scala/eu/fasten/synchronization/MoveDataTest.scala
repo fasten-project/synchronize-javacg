@@ -12,8 +12,8 @@ class MoveDataTest extends AnyFunSuite with EmbeddedKafka {
     val metadataMsg: String =
       Source.fromResource("metadatadb_msg.json").getLines.mkString
 
-    publishStringMessageToKafka("fasten.MetadataJavaExtension.out", metadataMsg)
-    MoveData.main(Array())
+    publishStringMessageToKafka("fasten.MetadataDBExtension.out", metadataMsg)
+    //MoveData.main(Array())
 
     EmbeddedKafka.stop()
     assert(true)
