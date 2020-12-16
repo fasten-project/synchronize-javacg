@@ -1,18 +1,18 @@
 package eu.fasten.synchronization
 
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 
-import eu.fasten.synchronization.util.{
-  SimpleKafkaDeserializationSchema,
-  SimpleKafkaSerializationSchema
-}
+import eu.fasten.synchronization.Main.streamEnv
+import eu.fasten.synchronization.util.{SimpleKafkaDeserializationSchema, SimpleKafkaSerializationSchema}
+import org.apache.flink.api.common.restartstrategy.RestartStrategies
+import org.apache.flink.api.common.time.Time
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.streaming.connectors.kafka.{
-  FlinkKafkaConsumer,
-  FlinkKafkaProducer
-}
+import org.apache.flink.streaming.connectors.kafka.{FlinkKafkaConsumer, FlinkKafkaProducer}
 import org.apache.flink.api.scala._
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
+import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer.Semantic
 
 object MoveData {
@@ -20,7 +20,17 @@ object MoveData {
   def main(args: Array[String]): Unit = {
     val streamEnv = StreamExecutionEnvironment.getExecutionEnvironment
 
-    //streamEnv.setParallelism(4)
+    streamEnv.setParallelism(4)
+    streamEnv.enableCheckpointing(5000)
+    streamEnv.setStateBackend(new RocksDBStateBackend(
+      "file:///mnt/fasten/flink-javasync/move_data",
+      true))
+    streamEnv.setRestartStrategy(
+      RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE,
+        Time.of(10, TimeUnit.SECONDS)))
+    val cConfig = streamEnv.getCheckpointConfig
+    cConfig.enableExternalizedCheckpoints(
+      ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION)
 
     streamEnv
       .addSource(getConsumer())
