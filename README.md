@@ -50,10 +50,55 @@ Output to the `topic_prefix.delay_topic.out` topic is:
 If multiple keys are used for joining, the individual keys are concatenated using `:`. `topic_one` and `topic_two` will be replaced with the actual topic names and the contents will be equal to the output of these topics. 
 
 
-## Deployment (old)
-To create and configure the topics, execute this on one of the servers
-```bash
+## Local deployment
+Ensure that you can pull the Github Packages container in your local environment. See [this page](https://docs.github.com/en/packages/guides/configuring-docker-for-use-with-github-packages#authenticating-to-github-packages). 
 
+Pull the Docker container.
 ```
-## Data flow
-<img src="sync_job.svg"/>
+docker pull docker.pkg.github.com/fasten-project/synchronize-javacg/syncjob:latest
+```
+
+Create a network.
+```
+docker network create flink-network
+```
+
+Run a JobManager to deploy the job.
+```bash
+docker run \
+     --env FLINK_PROPERTIES="jobmanager.rpc.address: jobmanager" \
+     --name=jobmanager \
+     --network flink-network \
+     docker.pkg.github.com/fasten-project/synchronize-javacg/syncjob:latest standalone-job \
+     --job-classname eu.fasten.synchronization.Main \
+     [job arguments]
+```
+For the `[job arguments]`, see the parameters above.
+
+Then run a TaskManager to run the job.
+```bash
+docker run \
+      --env FLINK_PROPERTIES="jobmanager.rpc.address: jobmanager" \
+      --network flink-network \
+      docker.pkg.github.com/fasten-project/synchronize-javacg/syncjob:latest \
+      taskmanager
+```
+
+An example JobManager deployment _including_ (dummy) job arguments:
+```bash
+docker run \
+     --env FLINK_PROPERTIES="jobmanager.rpc.address: jobmanager" \
+     --name=jobmanager \
+     --network flink-network \
+     docker.pkg.github.com/fasten-project/synchronize-javacg/syncjob:latest standalone-job \
+     --job-classname eu.fasten.synchronization.Main \
+     -b localhost:9092 \
+     --topic_one "topic_one" \
+     --topic_two "topic_two" \
+     -o "output_topic"  \
+     --topic_one_keys "input.input.key1,input.input,key2" \
+     --topic_two_keys "key1,key2" \
+     -w 180 \
+     --enable_delay false \
+     --delay_topic "delay"
+```
