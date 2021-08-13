@@ -1,0 +1,5 @@
+*
+!project/build.properties
+!project/build.sbt
+!src/main/*
+!build.sbt
