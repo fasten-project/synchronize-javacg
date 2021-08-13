@@ -21,7 +21,7 @@ jobs:
           name: sync_job.jar
           path: lib/
       - name: Build image
-        run: docker build . -f docker/Dockerfile -t syncjob --target package-ci
+        run: DOCKER_BUILDKIT=1 docker build . -f docker/Dockerfile -t syncjob --target package-ci
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
       - name: Push image
